@@ -1,0 +1,18 @@
+bin/
+obj/
+Output/*.pdf
+Output/*.log
+Data/recipients.xlsx
+config.json
+config.json.user
+Templates/email.md
+Templates/document.md
+Templates/document.css
+*.user
+.vs/
+.vscode/
+*.suo
+*.userprefs
+.DS_Store
+Data/recipients - Copy.xlsx
+Templates/logo-il.png

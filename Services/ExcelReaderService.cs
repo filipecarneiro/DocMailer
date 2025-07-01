@@ -1,0 +1,129 @@
+using DocMailer.Models;
+using DocMailer.Utils;
+using OfficeOpenXml;
+
+namespace DocMailer.Services
+{
+    /// <summary>
+    /// Service for reading data from Excel files
+    /// </summary>
+    public class ExcelReaderService
+    {
+        public List<Recipient> ReadRecipients(string filePath)
+        {
+            var recipients = new List<Recipient>();
+
+            // Configure EPPlus license context (for non-commercial use)
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+            using var package = new ExcelPackage(new FileInfo(filePath));
+            var worksheet = package.Workbook.Worksheets[0];
+            
+            // Assume first row contains headers
+            var rowCount = worksheet.Dimension.Rows;
+            var columnCount = worksheet.Dimension.Columns;
+            
+            // Find column indices
+            var nameCol = FindColumnIndex(worksheet, "Name") ?? 1;
+            var emailCol = FindColumnIndex(worksheet, "Email") ?? 2;
+            var companyCol = FindColumnIndex(worksheet, "Company");
+            var positionCol = FindColumnIndex(worksheet, "Position");
+            var lastSentCol = FindColumnIndex(worksheet, "LastSent");
+            var respondedCol = FindColumnIndex(worksheet, "Responded");
+            
+            for (int row = 2; row <= rowCount; row++)
+            {
+                var recipient = new Recipient
+                {
+                    Name = worksheet.Cells[row, nameCol].Text,
+                    Email = worksheet.Cells[row, emailCol].Text,
+                    Company = companyCol.HasValue ? worksheet.Cells[row, companyCol.Value].Text : string.Empty,
+                    Position = positionCol.HasValue ? worksheet.Cells[row, positionCol.Value].Text : string.Empty,
+                    RowNumber = row
+                };
+
+                // Parse LastSent if column exists
+                if (lastSentCol.HasValue && DateTime.TryParse(worksheet.Cells[row, lastSentCol.Value].Text, out var lastSent))
+                {
+                    recipient.LastSent = lastSent;
+                }
+
+                // Parse Responded if column exists
+                if (respondedCol.HasValue && bool.TryParse(worksheet.Cells[row, respondedCol.Value].Text, out var responded))
+                {
+                    recipient.Responded = responded;
+                }
+
+                // Add custom fields from all columns, skipping known standard columns
+                for (int col = 1; col <= columnCount; col++)
+                {
+                    var header = worksheet.Cells[1, col].Text;
+                    var value = worksheet.Cells[row, col].Text;
+                    
+                    // Skip known standard columns
+                    if (col == nameCol || col == emailCol || col == companyCol || col == positionCol || 
+                        col == lastSentCol || col == respondedCol)
+                        continue;
+                    
+                    // Add any other column as custom field
+                    if (!string.IsNullOrEmpty(header) && !string.IsNullOrEmpty(value))
+                    {
+                        recipient.CustomFields[header] = value;
+                    }
+                }
+
+                // Log custom fields count
+                if (recipient.CustomFields.Count > 0)
+                {
+                    Logger.LogInfo($"Recipient {recipient.Name} has {recipient.CustomFields.Count} custom fields.");
+                }
+
+                recipients.Add(recipient);
+            }
+
+            return recipients;
+        }
+
+        public void UpdateRecipientStatus(string filePath, Recipient recipient, bool success, string? errorMessage = null)
+        {
+            // Configure EPPlus license context (for non-commercial use)
+            ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+            using var package = new ExcelPackage(new FileInfo(filePath));
+            var worksheet = package.Workbook.Worksheets[0];
+            
+            // Find or create LastSent column
+            var lastSentCol = FindColumnIndex(worksheet, "LastSent");
+            if (!lastSentCol.HasValue)
+            {
+                lastSentCol = worksheet.Dimension.Columns + 1;
+                worksheet.Cells[1, lastSentCol.Value].Value = "LastSent";
+            }
+
+            // Update the cell based on success/failure
+            if (success)
+            {
+                worksheet.Cells[recipient.RowNumber, lastSentCol.Value].Value = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            }
+            else
+            {
+                worksheet.Cells[recipient.RowNumber, lastSentCol.Value].Value = $"ERROR: {errorMessage}";
+            }
+
+            package.Save();
+        }
+
+        private int? FindColumnIndex(ExcelWorksheet worksheet, string columnName)
+        {
+            var columnCount = worksheet.Dimension.Columns;
+            for (int col = 1; col <= columnCount; col++)
+            {
+                if (string.Equals(worksheet.Cells[1, col].Text, columnName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return col;
+                }
+            }
+            return null;
+        }
+    }
+}

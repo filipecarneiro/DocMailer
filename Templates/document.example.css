@@ -1,0 +1,145 @@
+/* DocMailer Example PDF Stylesheet - Standard Business Document */
+
+body {
+    font-family: "Times New Roman", serif;
+    margin: 72px;                    /* Standard 1 inch margins (72pt) */
+    line-height: 1.6;                /* Standard line spacing */
+    font-size: 12pt;                 /* Standard document font size */
+    color: #000;
+}
+
+h1, h2, h3 {
+    color: #000;
+    text-align: center;
+    font-weight: bold;
+    margin-top: 24pt;
+    margin-bottom: 12pt;
+}
+
+h1 {
+    font-size: 18pt;                 /* Main title */
+    margin-top: 0;
+    margin-bottom: 24pt;
+}
+
+h2 {
+    font-size: 14pt;                 /* Section headers */
+    text-align: left;
+    margin-top: 18pt;
+}
+
+h3 {
+    font-size: 12pt;                 /* Sub-section headers */
+    text-align: left;
+    margin-top: 12pt;
+}
+
+p {
+    margin-bottom: 12pt;             /* Standard paragraph spacing */
+    text-align: justify;
+    text-indent: 0;
+}
+
+.header {
+    text-align: center;
+    padding-bottom: 24pt;
+    margin-bottom: 24pt;
+    border-bottom: 1pt solid #ccc;
+}
+
+.header img {
+    max-width: 200px;
+    max-height: 60px;
+    height: auto;
+}
+
+.content {
+    margin-top: 0;
+}
+
+.footer {
+    border-top: 1pt solid #ccc;
+    padding-top: 12pt;
+    margin-top: 36pt;
+    font-size: 10pt;
+    color: #666;
+    text-align: center;
+}
+
+/* Lists */
+ul, ol {
+    margin-bottom: 12pt;
+    padding-left: 24pt;
+}
+
+li {
+    margin-bottom: 6pt;
+}
+
+/* Tables */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 12pt;
+}
+
+th, td {
+    border: 1pt solid #000;
+    padding: 6pt;
+    text-align: left;
+}
+
+th {
+    background-color: #f0f0f0;
+    font-weight: bold;
+}
+
+/* Signature section */
+.signature-line {
+    text-align: left;
+    font-style: italic;
+    font-size: 11pt;
+    color: #000;
+    margin-top: 72pt;                /* 1 inch space for signature */
+    margin-bottom: 12pt;
+    position: relative;
+}
+
+.signature-line::before {
+    content: "";
+    display: block;
+    width: 300px;                    /* Fixed signature line width */
+    height: 1pt;
+    background-color: #000;
+    margin-bottom: 6pt;
+}
+
+/* Business formatting */
+.client-info {
+    background-color: #f9f9f9;
+    padding: 12pt;
+    border: 1pt solid #ccc;
+    margin-bottom: 18pt;
+}
+
+.terms-section {
+    margin-top: 18pt;
+}
+
+.payment-info {
+    background-color: #fff5cc;
+    padding: 12pt;
+    border-left: 4pt solid #ffcc00;
+    margin: 12pt 0;
+}
+
+/* Print-specific styles */
+@media print {
+    body {
+        margin: 0.5in;               /* Slightly smaller margins for print */
+    }
+    
+    .signature-line {
+        page-break-inside: avoid;
+    }
+}

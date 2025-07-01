@@ -1,0 +1,13 @@
+{
+  "email": {
+    "smtpServer": "smtp.gmail.com",
+    "smtpPort": 587,
+    "enableSsl": true,
+    "username": "your-email@gmail.com",
+    "password": "your-app-password-here"
+  },
+  "excelFilePath": "Data/recipients.xlsx",
+  "outputDirectory": "Output",
+  "documentTemplatePath": "Templates/document.md",
+  "emailTemplatePath": "Templates/email.md"
+}
