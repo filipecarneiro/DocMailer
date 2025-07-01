@@ -2,6 +2,10 @@
 
 A C# application that processes Excel data to generate personalized PDF documents and send automated emails with attachments.
 
+[![.NET](https://img.shields.io/badge/.NET-8.0-blue.svg)](https://dotnet.microsoft.com/download)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![GitHub](https://img.shields.io/badge/GitHub-filipecarneiro/DocMailer-blue.svg)](https://github.com/filipecarneiro/DocMailer)
+
 ## 🚀 Features
 
 - **Excel Integration**: Reads recipient data from Excel files
@@ -53,10 +57,27 @@ DocMailer/
 
 ## 🛠️ Installation
 
-1. **Clone or download** the project
-2. **Run setup script**:
-   - Windows: `setup.bat`
-   - Linux/Mac: `./setup.sh`
+### Option 1: Clone from GitHub
+```bash
+git clone https://github.com/filipecarneiro/DocMailer.git
+cd DocMailer
+```
+
+### Option 2: Download ZIP
+1. Download the latest release from [GitHub](https://github.com/filipecarneiro/DocMailer)
+2. Extract the ZIP file
+3. Navigate to the project directory
+
+### Build the Project
+```bash
+# Restore dependencies and build
+dotnet restore
+dotnet build
+
+# Or run setup script
+# Windows: setup.bat
+# Linux/Mac: ./setup.sh
+```
 
 ## 🚀 Quick Start
 
@@ -319,22 +340,46 @@ Log levels: INFO, WARNING, ERROR
 
 ## 🤝 Contributing
 
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+### How to Contribute
 1. Fork the repository
-2. Create a feature branch
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+### Development Setup
+1. Clone your fork
+2. Install dependencies: `dotnet restore`
 3. Make your changes
 4. Test thoroughly
 5. Submit a pull request
 
 ## 📄 License
 
-This project is open source. Feel free to use and modify as needed.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🆘 Support
 
-For support:
-1. Check the logs in `Output/docmailer.log`
-2. Review this documentation
-3. Create an issue with detailed error information
+For support and questions:
+
+- **GitHub Issues**: [Create an issue](https://github.com/filipecarneiro/DocMailer/issues)
+- **Documentation**: Check this README and inline code comments
+- **Logs**: Review logs in `Output/docmailer.log` for troubleshooting
+
+### Reporting Issues
+When reporting issues, please include:
+1. Operating system and .NET version
+2. Error messages from logs
+3. Steps to reproduce the problem
+4. Sample data (anonymized) if relevant
+
+## 🙋‍♂️ Author
+
+**Filipe Carneiro**
+- GitHub: [@filipecarneiro](https://github.com/filipecarneiro)
+- Email: Available in commit history
 
 ---
 
