@@ -14,5 +14,5 @@ Templates/document.css
 *.suo
 *.userprefs
 .DS_Store
-Data/recipients - Copy.xlsx
-Templates/logo-il.png
+Data/*Copy.xlsx
+Templates/logo*.png
