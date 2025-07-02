@@ -28,25 +28,36 @@ namespace DocMailer
                 // Ensure required directories exist
                 EnsureDirectoriesExist();
 
-                // Process command line arguments
-                if (args.Length > 0)
+                // Parse command line arguments
+                bool isDryRun = args.Contains("--dry-run", StringComparer.OrdinalIgnoreCase);
+                var mainArgs = args.Where(arg => !arg.Equals("--dry-run", StringComparison.OrdinalIgnoreCase)).ToArray();
+
+                if (isDryRun)
                 {
-                    switch (args[0].ToLower())
+                    Logger.LogInfo("DRY RUN MODE - No emails will be sent, no Excel files will be updated");
+                    Console.WriteLine("🔍 DRY RUN MODE - Simulating operations without sending emails or updating files");
+                    Console.WriteLine();
+                }
+
+                // Process command line arguments
+                if (mainArgs.Length > 0)
+                {
+                    switch (mainArgs[0].ToLower())
                     {
                         case "send-all":
-                            await ProcessRecipients(SendMode.All);
+                            await ProcessRecipients(SendMode.All, isDryRun);
                             break;
                         case "send-not-sent":
-                            await ProcessRecipients(SendMode.NotSent);
+                            await ProcessRecipients(SendMode.NotSent, isDryRun);
                             break;
                         case "send-not-responded":
-                            await ProcessRecipients(SendMode.NotResponded);
+                            await ProcessRecipients(SendMode.NotResponded, isDryRun);
                             break;
                         case "send-test":
-                            await ProcessRecipients(SendMode.Test);
+                            await ProcessRecipients(SendMode.Test, isDryRun);
                             break;
                         case "test":
-                            await TestConfiguration();
+                            await TestConfiguration(isDryRun);
                             break;
                         case "help":
                         default:
@@ -69,9 +80,10 @@ namespace DocMailer
             }
         }
 
-        private static async Task ProcessRecipients(SendMode mode = SendMode.All)
+        private static async Task ProcessRecipients(SendMode mode = SendMode.All, bool isDryRun = false)
         {
-            Logger.LogInfo($"Starting recipient processing in {mode} mode...");
+            var modeText = isDryRun ? $"{mode} mode (DRY RUN)" : $"{mode} mode";
+            Logger.LogInfo($"Starting recipient processing in {modeText}...");
 
             // Check if Excel file exists
             if (!File.Exists(_config.ExcelFilePath))
@@ -110,8 +122,24 @@ namespace DocMailer
 
                     // Generate PDF document
                     var documentContent = _templateService.ProcessDocumentTemplate(documentTemplate, recipient);
-                    var pdfPath = _pdfGenerator.GeneratePdf(documentContent, _config.OutputDirectory, recipient, documentTemplate);
-                    Logger.LogInfo($"PDF generated: {pdfPath}");
+                    
+                    string pdfPath;
+                    if (isDryRun)
+                    {
+                        // In dry run mode, don't actually generate the PDF, just show what would be generated
+                        var documentTitle = documentTemplate.Metadata.ContainsKey("title") ? 
+                            documentTemplate.Metadata["title"].ToString() ?? "Document" : "Document";
+                        var safeTitle = documentTitle.Replace(" ", "_");
+                        var safeName = recipient.Name.Replace(" ", "_");
+                        pdfPath = Path.Combine(_config.OutputDirectory, $"{safeTitle}-{safeName}.pdf");
+                        Logger.LogInfo($"[DRY RUN] Would generate PDF: {pdfPath}");
+                        Console.WriteLine($"  📄 Would generate: {Path.GetFileName(pdfPath)}");
+                    }
+                    else
+                    {
+                        pdfPath = _pdfGenerator.GeneratePdf(documentContent, _config.OutputDirectory, recipient, documentTemplate);
+                        Logger.LogInfo($"PDF generated: {pdfPath}");
+                    }
 
                     // Process email template
                     var emailContent = _templateService.ProcessEmailTemplate(emailTemplate, recipient);
@@ -121,14 +149,26 @@ namespace DocMailer
                     var fromEmail = emailTemplate.Metadata.ContainsKey("fromEmail") ? emailTemplate.Metadata["fromEmail"].ToString() ?? "" : "";
                     var fromName = emailTemplate.Metadata.ContainsKey("fromName") ? emailTemplate.Metadata["fromName"].ToString() ?? "" : "";
 
-                    // Send email with attachment
+                    // Send email with attachment (or simulate in dry run)
                     if (_emailService != null)
                     {
-                        await _emailService.SendEmailAsync(emailSubject, emailContent, recipient.Email, recipient.Name, fromEmail, fromName, pdfPath);
-                        Logger.LogInfo($"Email sent to: {recipient.Email}");
-                        
-                        // Update Excel with success
-                        _excelReader.UpdateRecipientStatus(_config.ExcelFilePath, recipient, true);
+                        if (isDryRun)
+                        {
+                            Logger.LogInfo($"[DRY RUN] Would send email to: {recipient.Email}");
+                            Logger.LogInfo($"[DRY RUN] Subject: {emailSubject}");
+                            Logger.LogInfo($"[DRY RUN] From: {fromName} <{fromEmail}>");
+                            Console.WriteLine($"  📧 Would send to: {recipient.Email}");
+                            Console.WriteLine($"     Subject: {emailSubject}");
+                            Console.WriteLine($"     From: {fromName} <{fromEmail}>");
+                        }
+                        else
+                        {
+                            await _emailService.SendEmailAsync(emailSubject, emailContent, recipient.Email, recipient.Name, fromEmail, fromName, pdfPath);
+                            Logger.LogInfo($"Email sent to: {recipient.Email}");
+                            
+                            // Update Excel with success
+                            _excelReader.UpdateRecipientStatus(_config.ExcelFilePath, recipient, true);
+                        }
                     }
 
                     successCount++;
@@ -137,14 +177,29 @@ namespace DocMailer
                 {
                     Logger.LogError($"Error processing {recipient.Name}: {ex.Message}", ex);
                     
-                    // Update Excel with error
-                    _excelReader.UpdateRecipientStatus(_config.ExcelFilePath, recipient, false, ex.Message);
+                    if (!isDryRun)
+                    {
+                        // Update Excel with error (only in real mode)
+                        _excelReader.UpdateRecipientStatus(_config.ExcelFilePath, recipient, false, ex.Message);
+                    }
+                    else
+                    {
+                        Console.WriteLine($"  ❌ Would record error: {ex.Message}");
+                    }
                     
                     errorCount++;
                 }
             }
 
-            Logger.LogInfo($"Processing completed. Successes: {successCount}, Errors: {errorCount}");
+            var resultText = isDryRun ? "Dry run completed" : "Processing completed";
+            Logger.LogInfo($"{resultText}. Successes: {successCount}, Errors: {errorCount}");
+            
+            if (isDryRun)
+            {
+                Console.WriteLine();
+                Console.WriteLine($"🔍 Dry run summary: {successCount} would succeed, {errorCount} would have errors");
+                Console.WriteLine("   No files were created or modified.");
+            }
         }
 
         private static List<Recipient> FilterRecipients(List<Recipient> allRecipients, SendMode mode)
@@ -160,9 +215,10 @@ namespace DocMailer
             };
         }
 
-        private static async Task TestConfiguration()
+        private static async Task TestConfiguration(bool isDryRun = false)
         {
-            Logger.LogInfo("Testing configuration...");
+            var testModeText = isDryRun ? "Testing configuration (DRY RUN)..." : "Testing configuration...";
+            Logger.LogInfo(testModeText);
 
             try
             {
@@ -192,14 +248,38 @@ namespace DocMailer
 
                 if (_emailService != null)
                 {
-                    await _emailService.SendEmailAsync(processedSubject, processedContent, testRecipient.Email, testRecipient.Name, 
-                        _config.Email.Username, "DocMailer Test");
-                    Logger.LogInfo("Test email sent successfully!");
+                    if (isDryRun)
+                    {
+                        Logger.LogInfo("[DRY RUN] Would send test email");
+                        Logger.LogInfo($"[DRY RUN] To: {testRecipient.Email}");
+                        Logger.LogInfo($"[DRY RUN] Subject: {processedSubject}");
+                        Logger.LogInfo($"[DRY RUN] From: DocMailer Test <{_config.Email.Username}>");
+                        Console.WriteLine("🔍 Configuration test (DRY RUN):");
+                        Console.WriteLine($"  📧 Would send test email to: {testRecipient.Email}");
+                        Console.WriteLine($"     Subject: {processedSubject}");
+                        Console.WriteLine($"     SMTP Server: {_config.Email.SmtpServer}:{_config.Email.SmtpPort}");
+                        Console.WriteLine($"     SSL Enabled: {_config.Email.EnableSsl}");
+                        Console.WriteLine("   Test email would be sent successfully!");
+                    }
+                    else
+                    {
+                        await _emailService.SendEmailAsync(processedSubject, processedContent, testRecipient.Email, testRecipient.Name, 
+                            _config.Email.Username, "DocMailer Test");
+                        Logger.LogInfo("Test email sent successfully!");
+                    }
                 }
             }
             catch (Exception ex)
             {
-                Logger.LogError("Error in configuration test", ex);
+                if (isDryRun)
+                {
+                    Logger.LogError("[DRY RUN] Configuration test would fail", ex);
+                    Console.WriteLine($"❌ Configuration test would fail: {ex.Message}");
+                }
+                else
+                {
+                    Logger.LogError("Error in configuration test", ex);
+                }
             }
         }
 
@@ -224,6 +304,16 @@ namespace DocMailer
             Console.WriteLine("  send-test          - Send emails only to test recipients (name/email contains 'test')");
             Console.WriteLine("  test              - Test configuration by sending a test email");
             Console.WriteLine("  help              - Show this help");
+            Console.WriteLine();
+            Console.WriteLine("Options:");
+            Console.WriteLine("  --dry-run          - Simulate operations without sending emails or updating files");
+            Console.WriteLine("                       Can be used with any send command or test command");
+            Console.WriteLine();
+            Console.WriteLine("Examples:");
+            Console.WriteLine("  dotnet run send-all                    # Send to all recipients");
+            Console.WriteLine("  dotnet run send-all --dry-run          # Preview what would be sent");
+            Console.WriteLine("  dotnet run send-not-sent --dry-run     # Preview unsent recipients");
+            Console.WriteLine("  dotnet run test --dry-run              # Test configuration without sending");
             Console.WriteLine();
             Console.WriteLine("Excel File Format:");
             Console.WriteLine("  Required columns: Name, Email");
