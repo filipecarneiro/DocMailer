@@ -8,6 +8,7 @@ namespace DocMailer.Models
         All,
         NotSent,
         NotResponded,
-        Test
+        Test,
+        Specific
     }
 }

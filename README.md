@@ -262,6 +262,9 @@ dotnet run test --dry-run
 
 # Preview what would be sent to unsent recipients
 dotnet run send-not-sent --dry-run
+
+# Preview sending to a specific recipient
+dotnet run send-to recipient@example.com --dry-run
 ```
 
 ### Send to All Recipients
@@ -287,6 +290,23 @@ Sends to recipients who received emails but haven't responded.
 dotnet run send-test
 ```
 Sends a test email to the first recipient for testing purposes.
+
+### Send to Specific Recipient
+```bash
+dotnet run send-to recipient@example.com
+```
+Sends email to a specific recipient by email address. Useful for:
+- Resending to recipients with corrected data
+- Testing with specific individuals
+- Handling special cases or follow-ups
+
+```bash
+# Preview before sending to specific recipient
+dotnet run send-to recipient@example.com --dry-run
+
+# Send to specific recipient (real mode)
+dotnet run send-to recipient@example.com
+```
 
 ### Command Options
 - `--dry-run`: Preview mode - shows what would be done without actually sending emails or updating files

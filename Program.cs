@@ -56,6 +56,18 @@ namespace DocMailer
                         case "send-test":
                             await ProcessRecipients(SendMode.Test, isDryRun);
                             break;
+                        case "send-to":
+                            if (mainArgs.Length > 1)
+                            {
+                                await ProcessRecipients(SendMode.Specific, isDryRun, mainArgs[1]);
+                            }
+                            else
+                            {
+                                Console.WriteLine("Error: send-to command requires an email address.");
+                                Console.WriteLine("Usage: dotnet run send-to email@example.com [--dry-run]");
+                                return;
+                            }
+                            break;
                         case "test":
                             await TestConfiguration(isDryRun);
                             break;
@@ -80,9 +92,11 @@ namespace DocMailer
             }
         }
 
-        private static async Task ProcessRecipients(SendMode mode = SendMode.All, bool isDryRun = false)
+        private static async Task ProcessRecipients(SendMode mode = SendMode.All, bool isDryRun = false, string? specificEmail = null)
         {
-            var modeText = isDryRun ? $"{mode} mode (DRY RUN)" : $"{mode} mode";
+            var modeText = mode == SendMode.Specific && !string.IsNullOrEmpty(specificEmail) 
+                ? $"Specific recipient ({specificEmail})" + (isDryRun ? " (DRY RUN)" : "")
+                : (isDryRun ? $"{mode} mode (DRY RUN)" : $"{mode} mode");
             Logger.LogInfo($"Starting recipient processing in {modeText}...");
 
             // Check if Excel file exists
@@ -97,12 +111,21 @@ namespace DocMailer
             Logger.LogInfo($"Found {allRecipients.Count} total recipients.");
 
             // Filter recipients based on mode
-            var recipients = FilterRecipients(allRecipients, mode);
+            var recipients = FilterRecipients(allRecipients, mode, specificEmail);
             Logger.LogInfo($"Selected {recipients.Count} recipients for processing based on {mode} mode.");
 
             if (recipients.Count == 0)
             {
-                Logger.LogInfo("No recipients to process.");
+                if (mode == SendMode.Specific && !string.IsNullOrEmpty(specificEmail))
+                {
+                    Logger.LogInfo($"No recipient found with email: {specificEmail}");
+                    Console.WriteLine($"❌ No recipient found with email: {specificEmail}");
+                    Console.WriteLine("   Please check the email address and ensure it exists in your Excel file.");
+                }
+                else
+                {
+                    Logger.LogInfo("No recipients to process.");
+                }
                 return;
             }
 
@@ -202,7 +225,7 @@ namespace DocMailer
             }
         }
 
-        private static List<Recipient> FilterRecipients(List<Recipient> allRecipients, SendMode mode)
+        private static List<Recipient> FilterRecipients(List<Recipient> allRecipients, SendMode mode, string? specificEmail = null)
         {
             return mode switch
             {
@@ -211,6 +234,8 @@ namespace DocMailer
                 SendMode.NotResponded => allRecipients.Where(r => r.LastSent.HasValue && (!r.Responded.HasValue || !r.Responded.Value)).ToList(),
                 SendMode.Test => allRecipients.Where(r => r.Email.Contains("test", StringComparison.OrdinalIgnoreCase) || 
                                                          r.Name.Contains("test", StringComparison.OrdinalIgnoreCase)).ToList(),
+                SendMode.Specific when !string.IsNullOrEmpty(specificEmail) => allRecipients.Where(r => 
+                    r.Email.Equals(specificEmail, StringComparison.OrdinalIgnoreCase)).ToList(),
                 _ => allRecipients
             };
         }
@@ -302,6 +327,7 @@ namespace DocMailer
             Console.WriteLine("  send-not-sent      - Send emails only to recipients not previously sent");
             Console.WriteLine("  send-not-responded - Send emails only to recipients who haven't responded");
             Console.WriteLine("  send-test          - Send emails only to test recipients (name/email contains 'test')");
+            Console.WriteLine("  send-to <email>    - Send email to a specific recipient by email address");
             Console.WriteLine("  test              - Test configuration by sending a test email");
             Console.WriteLine("  help              - Show this help");
             Console.WriteLine();
@@ -310,10 +336,12 @@ namespace DocMailer
             Console.WriteLine("                       Can be used with any send command or test command");
             Console.WriteLine();
             Console.WriteLine("Examples:");
-            Console.WriteLine("  dotnet run send-all                    # Send to all recipients");
-            Console.WriteLine("  dotnet run send-all --dry-run          # Preview what would be sent");
-            Console.WriteLine("  dotnet run send-not-sent --dry-run     # Preview unsent recipients");
-            Console.WriteLine("  dotnet run test --dry-run              # Test configuration without sending");
+            Console.WriteLine("  dotnet run send-all                         # Send to all recipients");
+            Console.WriteLine("  dotnet run send-all --dry-run               # Preview what would be sent");
+            Console.WriteLine("  dotnet run send-not-sent --dry-run          # Preview unsent recipients");
+            Console.WriteLine("  dotnet run send-to john@example.com         # Send to specific recipient");
+            Console.WriteLine("  dotnet run send-to john@example.com --dry-run # Preview send to specific recipient");
+            Console.WriteLine("  dotnet run test --dry-run                   # Test configuration without sending");
             Console.WriteLine();
             Console.WriteLine("Excel File Format:");
             Console.WriteLine("  Required columns: Name, Email");
