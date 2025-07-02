@@ -250,6 +250,20 @@ dotnet run test
 ```
 Sends a test email to verify your configuration.
 
+### Dry Run Mode (Preview)
+Add `--dry-run` to any command to simulate operations without sending emails or updating files:
+
+```bash
+# Preview what would be sent to all recipients
+dotnet run send-all --dry-run
+
+# Preview configuration test
+dotnet run test --dry-run
+
+# Preview what would be sent to unsent recipients
+dotnet run send-not-sent --dry-run
+```
+
 ### Send to All Recipients
 ```bash
 dotnet run send-all
@@ -274,12 +288,15 @@ dotnet run send-test
 ```
 Sends a test email to the first recipient for testing purposes.
 
+### Command Options
+- `--dry-run`: Preview mode - shows what would be done without actually sending emails or updating files
+
 ### Process Flow
 Each command will:
 1. Read recipient data from Excel
-2. Generate personalized PDF for each recipient
-3. Send email with PDF attachment
-4. Update Excel with sending status and timestamp
+2. Generate personalized PDF for each recipient *(skipped in dry-run)*
+3. Send email with PDF attachment *(simulated in dry-run)*
+4. Update Excel with sending status and timestamp *(skipped in dry-run)*
 5. Log all activities to console and file
 
 ## 📦 Dependencies
@@ -314,6 +331,23 @@ All activities are logged to:
 Log levels: INFO, WARNING, ERROR
 
 ## ⚠️ Troubleshooting
+
+### 🔍 Using Dry Run for Debugging
+Before sending actual emails, always test with `--dry-run`:
+
+```bash
+# Test your setup without sending emails
+dotnet run send-all --dry-run
+
+# Verify configuration without sending test email
+dotnet run test --dry-run
+```
+
+This will show you:
+- Which recipients would be processed
+- What PDFs would be generated
+- What email subjects and content would be sent
+- Any potential errors without affecting your data
 
 ### Common Issues
 
