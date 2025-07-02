@@ -48,10 +48,25 @@ namespace DocMailer.Services
                     recipient.LastSent = lastSent;
                 }
 
-                // Parse Responded if column exists
-                if (respondedCol.HasValue && bool.TryParse(worksheet.Cells[row, respondedCol.Value].Text, out var responded))
+                // Parse Responded if column exists - handle various true/false representations
+                if (respondedCol.HasValue)
                 {
-                    recipient.Responded = responded;
+                    var respondedText = worksheet.Cells[row, respondedCol.Value].Text?.Trim().ToUpperInvariant();
+                    if (!string.IsNullOrEmpty(respondedText))
+                    {
+                        // Handle various representations of true/false
+                        if (respondedText == "TRUE" || respondedText == "1" || respondedText == "YES" || 
+                            respondedText == "Y")
+                        {
+                            recipient.Responded = true;
+                        }
+                        else if (respondedText == "FALSE" || respondedText == "0" || respondedText == "NO" || 
+                                 respondedText == "N")
+                        {
+                            recipient.Responded = false;
+                        }
+                        // If none of the above, leave as null (unknown)
+                    }
                 }
 
                 // Add custom fields from all columns, skipping known standard columns
