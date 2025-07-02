@@ -31,7 +31,7 @@ namespace DocMailer.Models
         /// <summary>
         /// Gets the first word from the Name field (first name)
         /// </summary>
-        public string FirstName => Name.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+        public string FirstName => Name?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? "";
         
         public Dictionary<string, object> CustomFields { get; set; } = new Dictionary<string, object>();
     }

@@ -35,20 +35,21 @@ namespace DocMailer.Services
 
         private string ReplacePlaceholders(string content, Recipient recipient)
         {
-            // Basic placeholders
-            content = content.Replace("{{Name}}", recipient.Name);
-            content = content.Replace("{{FirstName}}", recipient.FirstName);
-            content = content.Replace("{{Email}}", recipient.Email);
-            content = content.Replace("{{Company}}", recipient.Company);
-            content = content.Replace("{{Position}}", recipient.Position);
+            // Basic placeholders - trim whitespace to prevent Markdown formatting issues
+            content = content.Replace("{{Name}}", recipient.Name?.Trim() ?? "");
+            content = content.Replace("{{FirstName}}", recipient.FirstName?.Trim() ?? "");
+            content = content.Replace("{{Email}}", recipient.Email?.Trim() ?? "");
+            content = content.Replace("{{Company}}", recipient.Company?.Trim() ?? "");
+            content = content.Replace("{{Position}}", recipient.Position?.Trim() ?? "");
             content = content.Replace("{{SubscriptionDate}}", recipient.SubscriptionDate.ToString("dd/MM/yyyy"));
             content = content.Replace("{{CurrentDate}}", DateTime.Now.ToString("dd/MM/yyyy"));
             content = content.Replace("{{CurrentDateLong}}", FormatDateLongPortuguese(DateTime.Now));
 
-            // Custom field placeholders
+            // Custom field placeholders - trim whitespace from custom fields too
             foreach (var field in recipient.CustomFields)
             {
-                content = content.Replace($"{{{{{field.Key}}}}}", field.Value?.ToString() ?? "");
+                var fieldValue = field.Value?.ToString()?.Trim() ?? "";
+                content = content.Replace($"{{{{{field.Key}}}}}", fieldValue);
             }
 
             return content;

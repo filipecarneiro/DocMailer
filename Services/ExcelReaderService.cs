@@ -35,10 +35,10 @@ namespace DocMailer.Services
             {
                 var recipient = new Recipient
                 {
-                    Name = worksheet.Cells[row, nameCol].Text,
-                    Email = worksheet.Cells[row, emailCol].Text,
-                    Company = companyCol.HasValue ? worksheet.Cells[row, companyCol.Value].Text : string.Empty,
-                    Position = positionCol.HasValue ? worksheet.Cells[row, positionCol.Value].Text : string.Empty,
+                    Name = worksheet.Cells[row, nameCol].Text?.Trim() ?? string.Empty,
+                    Email = worksheet.Cells[row, emailCol].Text?.Trim() ?? string.Empty,
+                    Company = companyCol.HasValue ? worksheet.Cells[row, companyCol.Value].Text?.Trim() ?? string.Empty : string.Empty,
+                    Position = positionCol.HasValue ? worksheet.Cells[row, positionCol.Value].Text?.Trim() ?? string.Empty : string.Empty,
                     RowNumber = row
                 };
 
@@ -57,8 +57,8 @@ namespace DocMailer.Services
                 // Add custom fields from all columns, skipping known standard columns
                 for (int col = 1; col <= columnCount; col++)
                 {
-                    var header = worksheet.Cells[1, col].Text;
-                    var value = worksheet.Cells[row, col].Text;
+                    var header = worksheet.Cells[1, col].Text?.Trim();
+                    var value = worksheet.Cells[row, col].Text?.Trim();
                     
                     // Skip known standard columns
                     if (col == nameCol || col == emailCol || col == companyCol || col == positionCol || 
