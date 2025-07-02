@@ -392,6 +392,11 @@ This will show you:
 - Check for typos in placeholder syntax
 - Verify YAML metadata format
 
+**Markdown formatting not working in PDFs:**
+- The system automatically trims whitespace from all fields
+- If you have old data with trailing spaces, they will be cleaned automatically
+- Bold formatting `**Name**` should work correctly in generated PDFs
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
