@@ -71,6 +71,9 @@ namespace DocMailer
                         case "test":
                             await TestConfiguration(isDryRun);
                             break;
+                        case "stats":
+                            ShowStats();
+                            break;
                         case "help":
                         default:
                             ShowHelp();
@@ -308,6 +311,126 @@ namespace DocMailer
             }
         }
 
+        private static void ShowStats()
+        {
+            Logger.LogInfo("Generating campaign statistics...");
+
+            try
+            {
+                // Check if Excel file exists
+                if (!File.Exists(_config.ExcelFilePath))
+                {
+                    Console.WriteLine($"❌ Excel file not found: {_config.ExcelFilePath}");
+                    Logger.LogError($"Excel file not found: {_config.ExcelFilePath}");
+                    return;
+                }
+
+                // Read recipients from Excel
+                var allRecipients = _excelReader.ReadRecipients(_config.ExcelFilePath);
+
+                // Calculate statistics
+                var totalRecipients = allRecipients.Count;
+                var sentRecipients = allRecipients.Where(r => r.LastSent.HasValue).ToList();
+                var respondedRecipients = allRecipients.Where(r => r.Responded.HasValue && r.Responded.Value).ToList();
+                var notSentRecipients = allRecipients.Where(r => !r.LastSent.HasValue).ToList();
+                var sentButNotRespondedRecipients = allRecipients.Where(r => r.LastSent.HasValue && (!r.Responded.HasValue || !r.Responded.Value)).ToList();
+
+                // Calculate percentages
+                var sentPercentage = totalRecipients > 0 ? (sentRecipients.Count * 100.0) / totalRecipients : 0;
+                var respondedPercentage = totalRecipients > 0 ? (respondedRecipients.Count * 100.0) / totalRecipients : 0;
+                var responseRateAmongSent = sentRecipients.Count > 0 ? (respondedRecipients.Count * 100.0) / sentRecipients.Count : 0;
+
+                // Display statistics
+                Console.WriteLine();
+                Console.WriteLine("📊 ═══════════════════════════════════════════════════════════════");
+                Console.WriteLine("📊                    DOCMAILER CAMPAIGN STATISTICS");
+                Console.WriteLine("📊 ═══════════════════════════════════════════════════════════════");
+                Console.WriteLine();
+
+                // Overall Statistics
+                Console.WriteLine("📈 OVERALL STATISTICS");
+                Console.WriteLine("─────────────────────────────────────────────────────────────────");
+                Console.WriteLine($"👥 Total Recipients:           {totalRecipients:N0}");
+                Console.WriteLine();
+
+                // Email Sending Statistics
+                Console.WriteLine("📧 EMAIL SENDING STATUS");
+                Console.WriteLine("─────────────────────────────────────────────────────────────────");
+                Console.WriteLine($"✅ Emails Sent:               {sentRecipients.Count:N0} ({sentPercentage:F1}%)");
+                Console.WriteLine($"⏳ Not Sent Yet:              {notSentRecipients.Count:N0} ({(100 - sentPercentage):F1}%)");
+                Console.WriteLine();
+
+                // Response Statistics
+                Console.WriteLine("💬 RESPONSE STATISTICS");
+                Console.WriteLine("─────────────────────────────────────────────────────────────────");
+                Console.WriteLine($"🎯 Total Responses:           {respondedRecipients.Count:N0} ({respondedPercentage:F1}% of all)");
+                Console.WriteLine($"📨 Response Rate (of sent):   {responseRateAmongSent:F1}%");
+                Console.WriteLine($"🔄 Sent but No Response:      {sentButNotRespondedRecipients.Count:N0}");
+                Console.WriteLine();
+
+                // Progress Bar for Sending
+                Console.WriteLine("📊 SENDING PROGRESS");
+                Console.WriteLine("─────────────────────────────────────────────────────────────────");
+                var progressBar = CreateProgressBar(sentPercentage, 50);
+                Console.WriteLine($"[{progressBar}] {sentPercentage:F1}%");
+                Console.WriteLine();
+
+                // Progress Bar for Responses
+                Console.WriteLine("📊 RESPONSE PROGRESS");
+                Console.WriteLine("─────────────────────────────────────────────────────────────────");
+                var responseProgressBar = CreateProgressBar(respondedPercentage, 50);
+                Console.WriteLine($"[{responseProgressBar}] {respondedPercentage:F1}%");
+                Console.WriteLine();
+
+                // Recommendations
+                Console.WriteLine("💡 RECOMMENDATIONS");
+                Console.WriteLine("─────────────────────────────────────────────────────────────────");
+                
+                if (notSentRecipients.Count > 0)
+                {
+                    Console.WriteLine($"• Consider running: dotnet run send-not-sent");
+                    Console.WriteLine($"  └─ This will send to {notSentRecipients.Count} recipients who haven't received emails yet");
+                }
+
+                if (sentButNotRespondedRecipients.Count > 0)
+                {
+                    Console.WriteLine($"• Consider running: dotnet run send-not-responded");
+                    Console.WriteLine($"  └─ This will follow up with {sentButNotRespondedRecipients.Count} recipients who haven't responded");
+                }
+
+                if (responseRateAmongSent < 20 && sentRecipients.Count > 5)
+                {
+                    Console.WriteLine($"• Response rate is low ({responseRateAmongSent:F1}%). Consider:");
+                    Console.WriteLine($"  └─ Reviewing email content for clarity");
+                    Console.WriteLine($"  └─ Adding a clearer call-to-action");
+                    Console.WriteLine($"  └─ Following up with non-responders");
+                }
+
+                if (totalRecipients == 0)
+                {
+                    Console.WriteLine($"• No recipients found. Check your Excel file format and data.");
+                }
+
+                Console.WriteLine();
+                Console.WriteLine("📊 ═══════════════════════════════════════════════════════════════");
+
+                Logger.LogInfo($"Campaign statistics: {totalRecipients} total, {sentRecipients.Count} sent ({sentPercentage:F1}%), {respondedRecipients.Count} responded ({respondedPercentage:F1}%)");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError("Error generating statistics", ex);
+                Console.WriteLine($"❌ Error generating statistics: {ex.Message}");
+            }
+        }
+
+        private static string CreateProgressBar(double percentage, int width)
+        {
+            var filledWidth = (int)((percentage / 100.0) * width);
+            var filled = new string('█', filledWidth);
+            var empty = new string('░', width - filledWidth);
+            return filled + empty;
+        }
+
         private static void EnsureDirectoriesExist()
         {
             Directory.CreateDirectory(_config.OutputDirectory);
@@ -329,6 +452,7 @@ namespace DocMailer
             Console.WriteLine("  send-test          - Send emails only to test recipients (name/email contains 'test')");
             Console.WriteLine("  send-to <email>    - Send email to a specific recipient by email address");
             Console.WriteLine("  test              - Test configuration by sending a test email");
+            Console.WriteLine("  stats             - Show campaign statistics and progress");
             Console.WriteLine("  help              - Show this help");
             Console.WriteLine();
             Console.WriteLine("Options:");
@@ -342,6 +466,7 @@ namespace DocMailer
             Console.WriteLine("  dotnet run send-to john@example.com         # Send to specific recipient");
             Console.WriteLine("  dotnet run send-to john@example.com --dry-run # Preview send to specific recipient");
             Console.WriteLine("  dotnet run test --dry-run                   # Test configuration without sending");
+            Console.WriteLine("  dotnet run stats                            # Show campaign statistics");
             Console.WriteLine();
             Console.WriteLine("Excel File Format:");
             Console.WriteLine("  Required columns: Name, Email");

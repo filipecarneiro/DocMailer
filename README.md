@@ -167,10 +167,10 @@ For Gmail, use an App Password instead of your regular password:
 **Optional columns:** Company, Position, and any custom fields you need
 
 **System columns (automatically managed):**
-- Status - Email sending status
-- LastSent - Last email sent timestamp  
-- Response - Client response tracking
-- Error - Error messages if sending fails
+- **LastSent** - Last email sent timestamp (updated automatically)
+- **Responded** - Manual update to track responses (TRUE/true/1/YES/Y for responded, FALSE/false/0/NO/N for not responded)
+
+**Note**: The "Responded" column is used by the `stats` and `send-not-responded` commands to track which recipients have responded to your emails.
 
 ## 📝 Templates
 
@@ -244,6 +244,19 @@ Best regards,
 
 ## 🏃‍♂️ Usage
 
+### Available Commands
+
+| Command | Description | Dry Run Support |
+|---------|-------------|-----------------|
+| `test` | Test configuration by sending a test email | ✅ |
+| `send-all` | Send emails to all recipients | ✅ |
+| `send-not-sent` | Send emails only to recipients not previously sent | ✅ |
+| `send-not-responded` | Send emails only to recipients who haven't responded | ✅ |
+| `send-test` | Send emails only to test recipients (name/email contains 'test') | ✅ |
+| `send-to <email>` | Send email to a specific recipient by email address | ✅ |
+| `stats` | Show comprehensive campaign statistics and progress | ❌ |
+| `help` | Show help information | ❌ |
+
 ### Test Configuration
 ```bash
 dotnet run test
@@ -307,6 +320,53 @@ dotnet run send-to recipient@example.com --dry-run
 # Send to specific recipient (real mode)
 dotnet run send-to recipient@example.com
 ```
+
+### Campaign Statistics
+```bash
+dotnet run stats
+```
+Displays comprehensive campaign statistics including:
+- **Total Recipients**: Complete count of recipients in your Excel file
+- **Email Sending Status**: Number and percentage of emails sent vs. not sent
+- **Response Statistics**: Number and percentage of recipients who have responded
+- **Progress Bars**: Visual representation of sending and response progress
+- **Recommendations**: Suggested next actions based on current campaign status
+
+Example output:
+```
+📊 DOCMAILER CAMPAIGN STATISTICS
+📊 ═══════════════════════════════════════════════════════════════
+
+📈 OVERALL STATISTICS
+─────────────────────────────────────────────────────────────────
+👥 Total Recipients:           29
+
+📧 EMAIL SENDING STATUS
+─────────────────────────────────────────────────────────────────
+✅ Emails Sent:               29 (100.0%)
+⏳ Not Sent Yet:              0 (0.0%)
+
+💬 RESPONSE STATISTICS
+─────────────────────────────────────────────────────────────────
+🎯 Total Responses:           4 (13.8% of all)
+📨 Response Rate (of sent):   13.8%
+🔄 Sent but No Response:      25
+
+📊 SENDING PROGRESS
+─────────────────────────────────────────────────────────────────
+[██████████████████████████████████████████████████] 100.0%
+
+📊 RESPONSE PROGRESS
+─────────────────────────────────────────────────────────────────
+[██████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 13.8%
+
+💡 RECOMMENDATIONS
+─────────────────────────────────────────────────────────────────
+• Consider running: dotnet run send-not-responded
+  └─ This will follow up with 25 recipients who haven't responded
+```
+
+**Note**: To track responses, manually update the "Responded" column in your Excel file with TRUE/true/1/YES/Y for recipients who have responded.
 
 ### Command Options
 - `--dry-run`: Preview mode - shows what would be done without actually sending emails or updating files
