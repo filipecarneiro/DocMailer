@@ -28,6 +28,7 @@ namespace DocMailer.Services
             var emailCol = FindColumnIndex(worksheet, "Email") ?? 2;
             var companyCol = FindColumnIndex(worksheet, "Company");
             var positionCol = FindColumnIndex(worksheet, "Position");
+            var firstNameCol = FindColumnIndex(worksheet, "FirstName");
             var lastSentCol = FindColumnIndex(worksheet, "LastSent");
             var respondedCol = FindColumnIndex(worksheet, "Responded");
             
@@ -39,6 +40,7 @@ namespace DocMailer.Services
                     Email = worksheet.Cells[row, emailCol].Text?.Trim() ?? string.Empty,
                     Company = companyCol.HasValue ? worksheet.Cells[row, companyCol.Value].Text?.Trim() ?? string.Empty : string.Empty,
                     Position = positionCol.HasValue ? worksheet.Cells[row, positionCol.Value].Text?.Trim() ?? string.Empty : string.Empty,
+                    FirstName = firstNameCol.HasValue ? worksheet.Cells[row, firstNameCol.Value].Text?.Trim() ?? string.Empty : string.Empty,
                     RowNumber = row
                 };
 
@@ -82,7 +84,7 @@ namespace DocMailer.Services
                     
                     // Skip known standard columns
                     if (col == nameCol || col == emailCol || col == companyCol || col == positionCol || 
-                        col == lastSentCol || col == respondedCol)
+                        col == firstNameCol || col == lastSentCol || col == respondedCol)
                         continue;
                     
                     // Add any other column as custom field

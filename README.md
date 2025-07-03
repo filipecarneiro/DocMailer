@@ -158,13 +158,18 @@ For Gmail, use an App Password instead of your regular password:
 
 2. **Edit `recipients.xlsx` with your data** or use the example structure:
 
-| Name | Email | Company | Position | ClientID | ProjectTitle | StartDate | Duration | TotalValue |
-|------|-------|---------|----------|----------|--------------|-----------|----------|------------|
-| John Smith | john.smith@acmecorp.com | ACME Corporation | Project Manager | CLI001 | Website Development | 2025-07-15 | 3 months | $15,000 |
-| Sarah Johnson | sarah.j@techstartup.io | TechStartup Inc | CEO | CLI002 | Mobile App Development | 2025-08-01 | 6 months | $45,000 |
+| Name | Email | Company | Position | FirstName | ClientID | ProjectTitle | StartDate | Duration | TotalValue |
+|------|-------|---------|----------|-----------|----------|--------------|-----------|----------|------------|
+| John Smith | john.smith@acmecorp.com | ACME Corporation | Project Manager | Johnny | CLI001 | Website Development | 2025-07-15 | 3 months | $15,000 |
+| Sarah Johnson | sarah.j@techstartup.io | TechStartup Inc | CEO | | CLI002 | Mobile App Development | 2025-08-01 | 6 months | $45,000 |
+
+**Note:** In the example above, "Johnny" will be used as the first name for John Smith (instead of "John"), while Sarah Johnson will use "Sarah" (extracted from the Name field since FirstName is empty).
 
 **Required columns:** Name, Email  
-**Optional columns:** Company, Position, and any custom fields you need
+**Optional columns:** Company, Position, FirstName, and any custom fields you need
+
+**Special optional columns:**
+- **FirstName** - If provided, this will be used as the first name instead of extracting from the Name field. Use this for more accurate personalization when the automatic extraction doesn't work well for your naming format.
 
 **System columns (automatically managed):**
 - **LastSent** - Last email sent timestamp (updated automatically)
@@ -242,7 +247,7 @@ Best regards,
 
 ### Available Placeholders
 - `{{Name}}` - Full recipient name
-- `{{FirstName}}` - First name extracted from full name
+- `{{FirstName}}` - First name (uses FirstName column if provided, otherwise extracts from Name field)
 - `{{Email}}` - Recipient email address
 - `{{Company}}` - Recipient company
 - `{{Position}}` - Recipient position/title

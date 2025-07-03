@@ -37,7 +37,7 @@ namespace DocMailer.Services
         {
             // Basic placeholders - trim whitespace to prevent Markdown formatting issues
             content = content.Replace("{{Name}}", recipient.Name?.Trim() ?? "");
-            content = content.Replace("{{FirstName}}", recipient.FirstName?.Trim() ?? "");
+            content = content.Replace("{{FirstName}}", recipient.GetFirstName());
             content = content.Replace("{{Email}}", recipient.Email?.Trim() ?? "");
             content = content.Replace("{{Company}}", recipient.Company?.Trim() ?? "");
             content = content.Replace("{{Position}}", recipient.Position?.Trim() ?? "");

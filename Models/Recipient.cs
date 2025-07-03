@@ -18,6 +18,8 @@ namespace DocMailer.Models
         
         public string Position { get; set; } = string.Empty;
         
+        public string FirstName { get; set; } = string.Empty;
+        
         public DateTime SubscriptionDate { get; set; } = DateTime.Now;
         
         public DateTime? LastSent { get; set; }
@@ -31,9 +33,9 @@ namespace DocMailer.Models
         public int RowNumber { get; set; } // To track Excel row for updates
         
         /// <summary>
-        /// Gets the first word from the Name field (first name)
+        /// Gets the first name - uses explicit FirstName if available, otherwise extracts from Name field
         /// </summary>
-        public string FirstName => Name?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? "";
+        public string GetFirstName() => !string.IsNullOrEmpty(FirstName) ? FirstName.Trim() : Name?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? "";
         
         public Dictionary<string, object> CustomFields { get; set; } = new Dictionary<string, object>();
     }
