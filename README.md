@@ -168,9 +168,25 @@ For Gmail, use an App Password instead of your regular password:
 
 **System columns (automatically managed):**
 - **LastSent** - Last email sent timestamp (updated automatically)
-- **Responded** - Manual update to track responses (TRUE/true/1/YES/Y for responded, FALSE/false/0/NO/N for not responded)
+- **Responded** - Manual update to track responses:
+  - **TRUE/true/1/YES/Y** - Recipient has responded
+  - **FALSE/false/0/NO/N** - Recipient has not responded
+  - **CANCELED/-1** - Recipient is canceled (excluded from all operations)
 
-**Note**: The "Responded" column is used by the `stats` and `send-not-responded` commands to track which recipients have responded to your emails.
+**Note**: The "Responded" column is used by the `stats` and `send-not-responded` commands to track which recipients have responded to your emails. Recipients marked as CANCELED or -1 are excluded from all send/test commands and are shown separately in statistics.
+
+### Canceled Recipients
+
+You can mark recipients as canceled by setting their "Responded" column to **CANCELED** or **-1**. This is useful for:
+- Recipients who unsubscribed or requested to be removed
+- Bounced or invalid email addresses
+- Temporarily excluding specific recipients without deleting them
+
+**Effects of marking a recipient as CANCELED:**
+- Excluded from all send commands (`send-all`, `send-not-sent`, `send-not-responded`, `send-test`)
+- Excluded from all test commands that process recipients
+- Shown separately in statistics (not counted in response rates)
+- Preserved in the Excel file for audit purposes
 
 ## 📝 Templates
 
@@ -249,9 +265,9 @@ Best regards,
 | Command | Description | Dry Run Support |
 |---------|-------------|-----------------|
 | `test` | Test configuration by sending a test email | ✅ |
-| `send-all` | Send emails to all recipients | ✅ |
-| `send-not-sent` | Send emails only to recipients not previously sent | ✅ |
-| `send-not-responded` | Send emails only to recipients who haven't responded | ✅ |
+| `send-all` | Send emails to all active recipients (excludes canceled) | ✅ |
+| `send-not-sent` | Send emails only to active recipients not previously sent | ✅ |
+| `send-not-responded` | Send emails only to active recipients who haven't responded | ✅ |
 | `send-test` | Send emails only to test recipients (name/email contains 'test') | ✅ |
 | `send-to <email>` | Send email to a specific recipient by email address | ✅ |
 | `stats` | Show comprehensive campaign statistics and progress | ❌ |
@@ -284,25 +300,25 @@ dotnet run send-to recipient@example.com --dry-run
 ```bash
 dotnet run send-all
 ```
-Processes all recipients from the Excel file.
+Processes all active recipients from the Excel file. Recipients marked as CANCELED or -1 are excluded.
 
 ### Send to Unsent Recipients Only
 ```bash
 dotnet run send-not-sent
 ```
-Only sends to recipients who haven't received emails yet.
+Only sends to active recipients who haven't received emails yet. Recipients marked as CANCELED or -1 are excluded.
 
 ### Send to Non-Responders
 ```bash
 dotnet run send-not-responded
 ```
-Sends to recipients who received emails but haven't responded.
+Sends to active recipients who received emails but haven't responded. Recipients marked as CANCELED or -1 are excluded.
 
 ### Send Test Email
 ```bash
 dotnet run send-test
 ```
-Sends a test email to the first recipient for testing purposes.
+Sends a test email to the first active recipient for testing purposes. Recipients marked as CANCELED or -1 are excluded.
 
 ### Send to Specific Recipient
 ```bash
@@ -327,8 +343,9 @@ dotnet run stats
 ```
 Displays comprehensive campaign statistics including:
 - **Total Recipients**: Complete count of recipients in your Excel file
-- **Email Sending Status**: Number and percentage of emails sent vs. not sent
-- **Response Statistics**: Number and percentage of recipients who have responded
+- **Canceled Recipients**: Count of recipients marked as CANCELED or -1 (excluded from operations)
+- **Email Sending Status**: Number and percentage of emails sent vs. not sent (active recipients only)
+- **Response Statistics**: Number and percentage of recipients who have responded (active recipients only)
 - **Progress Bars**: Visual representation of sending and response progress
 - **Recommendations**: Suggested next actions based on current campaign status
 
@@ -340,17 +357,18 @@ Example output:
 📈 OVERALL STATISTICS
 ─────────────────────────────────────────────────────────────────
 👥 Total Recipients:           29
+❌ Canceled Recipients:       2
 
-📧 EMAIL SENDING STATUS
+📧 EMAIL SENDING STATUS (Active Recipients Only)
 ─────────────────────────────────────────────────────────────────
-✅ Emails Sent:               29 (100.0%)
+✅ Emails Sent:               27 (100.0%)
 ⏳ Not Sent Yet:              0 (0.0%)
 
-💬 RESPONSE STATISTICS
+💬 RESPONSE STATISTICS (Active Recipients Only)
 ─────────────────────────────────────────────────────────────────
-🎯 Total Responses:           4 (13.8% of all)
-📨 Response Rate (of sent):   13.8%
-🔄 Sent but No Response:      25
+🎯 Total Responses:           4 (14.8% of active)
+📨 Response Rate (of sent):   14.8%
+🔄 Sent but No Response:      23
 
 📊 SENDING PROGRESS
 ─────────────────────────────────────────────────────────────────
@@ -358,15 +376,15 @@ Example output:
 
 📊 RESPONSE PROGRESS
 ─────────────────────────────────────────────────────────────────
-[██████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 13.8%
+[██████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░] 14.8%
 
 💡 RECOMMENDATIONS
 ─────────────────────────────────────────────────────────────────
 • Consider running: dotnet run send-not-responded
-  └─ This will follow up with 25 recipients who haven't responded
+  └─ This will follow up with 23 active recipients who haven't responded
 ```
 
-**Note**: To track responses, manually update the "Responded" column in your Excel file with TRUE/true/1/YES/Y for recipients who have responded.
+**Note**: To track responses, manually update the "Responded" column in your Excel file with TRUE/true/1/YES/Y for recipients who have responded, or CANCELED/-1 for recipients to exclude from all operations.
 
 ### Command Options
 - `--dry-run`: Preview mode - shows what would be done without actually sending emails or updating files

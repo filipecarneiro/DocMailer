@@ -54,8 +54,13 @@ namespace DocMailer.Services
                     var respondedText = worksheet.Cells[row, respondedCol.Value].Text?.Trim().ToUpperInvariant();
                     if (!string.IsNullOrEmpty(respondedText))
                     {
+                        // Handle CANCELED status first
+                        if (respondedText == "CANCELED" || respondedText == "-1")
+                        {
+                            recipient.IsCanceled = true;
+                        }
                         // Handle various representations of true/false
-                        if (respondedText == "TRUE" || respondedText == "1" || respondedText == "YES" || 
+                        else if (respondedText == "TRUE" || respondedText == "1" || respondedText == "YES" || 
                             respondedText == "Y")
                         {
                             recipient.Responded = true;

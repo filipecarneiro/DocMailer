@@ -24,6 +24,8 @@ namespace DocMailer.Models
         
         public bool? Responded { get; set; }
         
+        public bool IsCanceled { get; set; } = false;
+        
         public string LastSentStatus { get; set; } = string.Empty;
         
         public int RowNumber { get; set; } // To track Excel row for updates

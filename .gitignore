@@ -18,3 +18,5 @@ Data/*Copy.xlsx
 Templates/logo*.png
 Data/~$*.xlsx
 CreateExampleExcel.cs
+
+.fake

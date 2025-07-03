@@ -230,16 +230,19 @@ namespace DocMailer
 
         private static List<Recipient> FilterRecipients(List<Recipient> allRecipients, SendMode mode, string? specificEmail = null)
         {
+            // First filter out canceled recipients from all operations
+            var activeRecipients = allRecipients.Where(r => !r.IsCanceled).ToList();
+            
             return mode switch
             {
-                SendMode.All => allRecipients,
-                SendMode.NotSent => allRecipients.Where(r => !r.LastSent.HasValue).ToList(),
-                SendMode.NotResponded => allRecipients.Where(r => r.LastSent.HasValue && (!r.Responded.HasValue || !r.Responded.Value)).ToList(),
-                SendMode.Test => allRecipients.Where(r => r.Email.Contains("test", StringComparison.OrdinalIgnoreCase) || 
+                SendMode.All => activeRecipients,
+                SendMode.NotSent => activeRecipients.Where(r => !r.LastSent.HasValue).ToList(),
+                SendMode.NotResponded => activeRecipients.Where(r => r.LastSent.HasValue && (!r.Responded.HasValue || !r.Responded.Value)).ToList(),
+                SendMode.Test => activeRecipients.Where(r => r.Email.Contains("test", StringComparison.OrdinalIgnoreCase) || 
                                                          r.Name.Contains("test", StringComparison.OrdinalIgnoreCase)).ToList(),
-                SendMode.Specific when !string.IsNullOrEmpty(specificEmail) => allRecipients.Where(r => 
+                SendMode.Specific when !string.IsNullOrEmpty(specificEmail) => activeRecipients.Where(r => 
                     r.Email.Equals(specificEmail, StringComparison.OrdinalIgnoreCase)).ToList(),
-                _ => allRecipients
+                _ => activeRecipients
             };
         }
 
@@ -330,14 +333,17 @@ namespace DocMailer
 
                 // Calculate statistics
                 var totalRecipients = allRecipients.Count;
-                var sentRecipients = allRecipients.Where(r => r.LastSent.HasValue).ToList();
-                var respondedRecipients = allRecipients.Where(r => r.Responded.HasValue && r.Responded.Value).ToList();
-                var notSentRecipients = allRecipients.Where(r => !r.LastSent.HasValue).ToList();
-                var sentButNotRespondedRecipients = allRecipients.Where(r => r.LastSent.HasValue && (!r.Responded.HasValue || !r.Responded.Value)).ToList();
+                var canceledRecipients = allRecipients.Where(r => r.IsCanceled).ToList();
+                var activeRecipients = allRecipients.Where(r => !r.IsCanceled).ToList();
+                var sentRecipients = activeRecipients.Where(r => r.LastSent.HasValue).ToList();
+                var respondedRecipients = activeRecipients.Where(r => r.Responded.HasValue && r.Responded.Value).ToList();
+                var notSentRecipients = activeRecipients.Where(r => !r.LastSent.HasValue).ToList();
+                var sentButNotRespondedRecipients = activeRecipients.Where(r => r.LastSent.HasValue && (!r.Responded.HasValue || !r.Responded.Value)).ToList();
 
-                // Calculate percentages
-                var sentPercentage = totalRecipients > 0 ? (sentRecipients.Count * 100.0) / totalRecipients : 0;
-                var respondedPercentage = totalRecipients > 0 ? (respondedRecipients.Count * 100.0) / totalRecipients : 0;
+                // Calculate percentages (based on active recipients, excluding canceled)
+                var activeRecipientsCount = activeRecipients.Count;
+                var sentPercentage = activeRecipientsCount > 0 ? (sentRecipients.Count * 100.0) / activeRecipientsCount : 0;
+                var respondedPercentage = activeRecipientsCount > 0 ? (respondedRecipients.Count * 100.0) / activeRecipientsCount : 0;
                 var responseRateAmongSent = sentRecipients.Count > 0 ? (respondedRecipients.Count * 100.0) / sentRecipients.Count : 0;
 
                 // Display statistics
@@ -351,6 +357,11 @@ namespace DocMailer
                 Console.WriteLine("📈 OVERALL STATISTICS");
                 Console.WriteLine("─────────────────────────────────────────────────────────────────");
                 Console.WriteLine($"👥 Total Recipients:           {totalRecipients:N0}");
+                Console.WriteLine($"✅ Active Recipients:          {activeRecipientsCount:N0}");
+                if (canceledRecipients.Count > 0)
+                {
+                    Console.WriteLine($"❌ Canceled Recipients:       {canceledRecipients.Count:N0}");
+                }
                 Console.WriteLine();
 
                 // Email Sending Statistics
@@ -361,9 +372,9 @@ namespace DocMailer
                 Console.WriteLine();
 
                 // Response Statistics
-                Console.WriteLine("💬 RESPONSE STATISTICS");
+                Console.WriteLine("💬 RESPONSE STATISTICS (Active Recipients Only)");
                 Console.WriteLine("─────────────────────────────────────────────────────────────────");
-                Console.WriteLine($"🎯 Total Responses:           {respondedRecipients.Count:N0} ({respondedPercentage:F1}% of all)");
+                Console.WriteLine($"🎯 Total Responses:           {respondedRecipients.Count:N0} ({respondedPercentage:F1}% of active)");
                 Console.WriteLine($"📨 Response Rate (of sent):   {responseRateAmongSent:F1}%");
                 Console.WriteLine($"🔄 Sent but No Response:      {sentButNotRespondedRecipients.Count:N0}");
                 Console.WriteLine();
@@ -414,7 +425,7 @@ namespace DocMailer
                 Console.WriteLine();
                 Console.WriteLine("📊 ═══════════════════════════════════════════════════════════════");
 
-                Logger.LogInfo($"Campaign statistics: {totalRecipients} total, {sentRecipients.Count} sent ({sentPercentage:F1}%), {respondedRecipients.Count} responded ({respondedPercentage:F1}%)");
+                Logger.LogInfo($"Campaign statistics: {totalRecipients} total ({activeRecipientsCount} active, {canceledRecipients.Count} canceled), {sentRecipients.Count} sent ({sentPercentage:F1}%), {respondedRecipients.Count} responded ({respondedPercentage:F1}%)");
             }
             catch (Exception ex)
             {
@@ -472,7 +483,10 @@ namespace DocMailer
             Console.WriteLine("  Required columns: Name, Email");
             Console.WriteLine("  Optional columns: Company, Position, LastSent, Responded");
             Console.WriteLine("  - LastSent: Updated automatically with timestamp or error message");
-            Console.WriteLine("  - Responded: Manual update (true/false) to track responses");
+            Console.WriteLine("  - Responded: Manual update (true/false/CANCELED/-1) to track responses");
+            Console.WriteLine("    * TRUE/true/1/YES/Y = Responded");
+            Console.WriteLine("    * FALSE/false/0/NO/N = Not responded");
+            Console.WriteLine("    * CANCELED/-1 = Exclude from all operations (shown in stats only)");
             Console.WriteLine();
             Console.WriteLine("Configuration:");
             Console.WriteLine("  - Edit config.json file with your settings");
