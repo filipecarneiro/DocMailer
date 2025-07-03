@@ -51,7 +51,7 @@ DocMailer/
 
 ## 📋 Prerequisites
 
-- .NET 8.0 or later
+- [.NET SDK 8.0](https://dotnet.microsoft.com/en-us/download/dotnet/8.0) or later
 - SMTP email account (Gmail, Outlook, etc.)
 - Excel file with recipient data
 
@@ -143,8 +143,8 @@ dotnet run send-all
 
 ### Gmail Setup
 For Gmail, use an App Password instead of your regular password:
-1. Enable 2-factor authentication
-2. Generate an App Password in Google Account settings
+1. Enable [2-factor authentication](https://myaccount.google.com/signinoptions/twosv)
+2. Generate an [App Password in Google Account settings](https://myaccount.google.com/apppasswords)
 3. Use the App Password in the config file
 
 ## 📊 Excel File Format
