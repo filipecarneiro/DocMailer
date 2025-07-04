@@ -10,6 +10,7 @@ namespace DocMailer.Models
         public string OutputDirectory { get; set; } = "Output";
         public string DocumentTemplatePath { get; set; } = "Templates/document.md";
         public string EmailTemplatePath { get; set; } = "Templates/email.md";
+        public string ThankyouTemplatePath { get; set; } = "Templates/thankyou.md";
     }
 
     public class EmailConfig

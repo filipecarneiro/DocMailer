@@ -8,6 +8,7 @@ config.json.user
 Templates/email.md
 Templates/document.md
 Templates/document.css
+Templates/thankyou.md
 *.user
 .vs/
 .vscode/

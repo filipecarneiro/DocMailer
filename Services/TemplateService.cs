@@ -25,6 +25,9 @@ namespace DocMailer.Services
             // Replace basic placeholders
             content = ReplacePlaceholders(content, recipient);
             
+            // Replace sender placeholders from template metadata
+            content = ReplaceSenderPlaceholders(content, template);
+            
             return content;
         }
 
@@ -135,6 +138,18 @@ namespace DocMailer.Services
             };
 
             return $"{date.Day} de {months[date.Month]} de {date.Year}";
+        }
+
+        private string ReplaceSenderPlaceholders(string content, EmailTemplate template)
+        {
+            // Replace sender placeholders from template metadata
+            var fromName = template.Metadata.ContainsKey("fromName") ? template.Metadata["fromName"].ToString() ?? "" : "";
+            var fromEmail = template.Metadata.ContainsKey("fromEmail") ? template.Metadata["fromEmail"].ToString() ?? "" : "";
+            
+            content = content.Replace("{{FromName}}", fromName.Trim());
+            content = content.Replace("{{FromEmail}}", fromEmail.Trim());
+            
+            return content;
         }
     }
 }

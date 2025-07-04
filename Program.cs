@@ -1,6 +1,7 @@
 using DocMailer.Models;
 using DocMailer.Services;
 using DocMailer.Utils;
+using System.Text;
 
 namespace DocMailer
 {
@@ -19,6 +20,10 @@ namespace DocMailer
         {
             try
             {
+                // Configure console encoding for proper UTF-8 character display
+                Console.OutputEncoding = Encoding.UTF8;
+                Console.InputEncoding = Encoding.UTF8;
+
                 Logger.LogInfo("Starting DocMailer...");
 
                 // Load configuration
@@ -65,6 +70,21 @@ namespace DocMailer
                             {
                                 Console.WriteLine("Error: send-to command requires an email address.");
                                 Console.WriteLine("Usage: dotnet run send-to email@example.com [--dry-run]");
+                                return;
+                            }
+                            break;
+                        case "send-thankyou":
+                            await ProcessRecipients(SendMode.Thankyou, isDryRun);
+                            break;
+                        case "send-thankyou-to":
+                            if (mainArgs.Length > 1)
+                            {
+                                await ProcessRecipientsWithThankyou(mainArgs[1], isDryRun);
+                            }
+                            else
+                            {
+                                Console.WriteLine("Error: send-thankyou-to command requires an email address.");
+                                Console.WriteLine("Usage: dotnet run send-thankyou-to email@example.com [--dry-run]");
                                 return;
                             }
                             break;
@@ -134,7 +154,8 @@ namespace DocMailer
 
             // Load templates
             var documentTemplate = _templateService.LoadDocumentTemplate(_config.DocumentTemplatePath);
-            var emailTemplate = _templateService.LoadEmailTemplate(_config.EmailTemplatePath);
+            var emailTemplatePath = mode == SendMode.Thankyou ? _config.ThankyouTemplatePath : _config.EmailTemplatePath;
+            var emailTemplate = _templateService.LoadEmailTemplate(emailTemplatePath);
 
             // Process each recipient
             var successCount = 0;
@@ -240,6 +261,7 @@ namespace DocMailer
                 SendMode.NotResponded => activeRecipients.Where(r => r.LastSent.HasValue && (!r.Responded.HasValue || !r.Responded.Value)).ToList(),
                 SendMode.Test => activeRecipients.Where(r => r.Email.Contains("test", StringComparison.OrdinalIgnoreCase) || 
                                                          r.Name.Contains("test", StringComparison.OrdinalIgnoreCase)).ToList(),
+                SendMode.Thankyou => activeRecipients.Where(r => r.Responded.HasValue && r.Responded.Value).ToList(),
                 SendMode.Specific when !string.IsNullOrEmpty(specificEmail) => activeRecipients.Where(r => 
                     r.Email.Equals(specificEmail, StringComparison.OrdinalIgnoreCase)).ToList(),
                 _ => activeRecipients
@@ -462,6 +484,8 @@ namespace DocMailer
             Console.WriteLine("  send-not-responded - Send emails only to recipients who haven't responded");
             Console.WriteLine("  send-test          - Send emails only to test recipients (name/email contains 'test')");
             Console.WriteLine("  send-to <email>    - Send email to a specific recipient by email address");
+            Console.WriteLine("  send-thankyou      - Send thank you emails to recipients who have responded");
+            Console.WriteLine("  send-thankyou-to <email> - Send thank you email to a specific recipient who has responded");
             Console.WriteLine("  test              - Test configuration by sending a test email");
             Console.WriteLine("  stats             - Show campaign statistics and progress");
             Console.WriteLine("  help              - Show this help");
@@ -476,6 +500,10 @@ namespace DocMailer
             Console.WriteLine("  dotnet run send-not-sent --dry-run          # Preview unsent recipients");
             Console.WriteLine("  dotnet run send-to john@example.com         # Send to specific recipient");
             Console.WriteLine("  dotnet run send-to john@example.com --dry-run # Preview send to specific recipient");
+            Console.WriteLine("  dotnet run send-thankyou                    # Send thank you to responders");
+            Console.WriteLine("  dotnet run send-thankyou --dry-run          # Preview thank you emails");
+            Console.WriteLine("  dotnet run send-thankyou-to john@example.com # Send thank you to specific responder");
+            Console.WriteLine("  dotnet run send-thankyou-to john@example.com --dry-run # Preview thank you to specific responder");
             Console.WriteLine("  dotnet run test --dry-run                   # Test configuration without sending");
             Console.WriteLine("  dotnet run stats                            # Show campaign statistics");
             Console.WriteLine();
@@ -493,6 +521,111 @@ namespace DocMailer
             Console.WriteLine("  - Place Excel file in Data/ folder");
             Console.WriteLine("  - Update template paths in config.json");
             Console.WriteLine("  - Generated files go to Output/ folder");
+        }
+
+        private static async Task ProcessRecipientsWithThankyou(string specificEmail, bool isDryRun = false)
+        {
+            var modeText = $"Send thank you to specific recipient ({specificEmail})" + (isDryRun ? " (DRY RUN)" : "");
+            Logger.LogInfo($"Starting thank you email processing for {modeText}...");
+
+            // Check if Excel file exists
+            if (!File.Exists(_config.ExcelFilePath))
+            {
+                Logger.LogError($"Excel file not found: {_config.ExcelFilePath}");
+                return;
+            }
+
+            // Read recipients from Excel
+            var allRecipients = _excelReader.ReadRecipients(_config.ExcelFilePath);
+            Logger.LogInfo($"Found {allRecipients.Count} total recipients.");
+
+            // Find the specific recipient who has responded
+            var recipient = allRecipients.FirstOrDefault(r => 
+                r.Email.Equals(specificEmail, StringComparison.OrdinalIgnoreCase) && 
+                !r.IsCanceled && 
+                r.Responded.HasValue && 
+                r.Responded.Value);
+
+            if (recipient == null)
+            {
+                // Check if the recipient exists but hasn't responded
+                var existingRecipient = allRecipients.FirstOrDefault(r => 
+                    r.Email.Equals(specificEmail, StringComparison.OrdinalIgnoreCase) && 
+                    !r.IsCanceled);
+
+                if (existingRecipient == null)
+                {
+                    Logger.LogInfo($"No recipient found with email: {specificEmail}");
+                    Console.WriteLine($"❌ No recipient found with email: {specificEmail}");
+                    Console.WriteLine("   Please check the email address and ensure it exists in your Excel file.");
+                }
+                else if (!existingRecipient.Responded.HasValue || !existingRecipient.Responded.Value)
+                {
+                    Logger.LogInfo($"Recipient {specificEmail} has not responded yet.");
+                    Console.WriteLine($"❌ Recipient {specificEmail} has not responded yet.");
+                    Console.WriteLine("   Thank you emails are only sent to recipients who have responded (Responded = TRUE).");
+                    Console.WriteLine("   Please update the 'Responded' column in your Excel file first.");
+                }
+                else if (existingRecipient.IsCanceled)
+                {
+                    Logger.LogInfo($"Recipient {specificEmail} is canceled.");
+                    Console.WriteLine($"❌ Recipient {specificEmail} is canceled.");
+                    Console.WriteLine("   Thank you emails are not sent to canceled recipients.");
+                }
+                return;
+            }
+
+            Logger.LogInfo($"Found recipient for thank you email: {recipient.Name} ({recipient.Email})");
+
+            // Load thank you email template
+            var emailTemplate = _templateService.LoadEmailTemplate(_config.ThankyouTemplatePath);
+
+            try
+            {
+                Logger.LogInfo($"Processing thank you email for: {recipient.Name} ({recipient.Email})");
+
+                // Process email template
+                var emailContent = _templateService.ProcessEmailTemplate(emailTemplate, recipient);
+                var emailSubject = _templateService.ProcessEmailSubject(emailTemplate.Subject, recipient);
+                
+                // Get sender info from template metadata
+                var fromEmail = emailTemplate.Metadata.ContainsKey("fromEmail") ? emailTemplate.Metadata["fromEmail"].ToString() ?? "" : "";
+                var fromName = emailTemplate.Metadata.ContainsKey("fromName") ? emailTemplate.Metadata["fromName"].ToString() ?? "" : "";
+
+                // Send email (or simulate in dry run)
+                if (_emailService != null)
+                {
+                    if (isDryRun)
+                    {
+                        Logger.LogInfo($"[DRY RUN] Would send thank you email to: {recipient.Email}");
+                        Logger.LogInfo($"[DRY RUN] Subject: {emailSubject}");
+                        Logger.LogInfo($"[DRY RUN] From: {fromName} <{fromEmail}>");
+                        Console.WriteLine($"🔍 DRY RUN - Would send thank you email:");
+                        Console.WriteLine($"  📧 To: {recipient.Email} ({recipient.Name})");
+                        Console.WriteLine($"     Subject: {emailSubject}");
+                        Console.WriteLine($"     From: {fromName} <{fromEmail}>");
+                        Console.WriteLine($"     Template: {Path.GetFileName(_config.ThankyouTemplatePath)}");
+                        Console.WriteLine("   Thank you email would be sent successfully!");
+                    }
+                    else
+                    {
+                        await _emailService.SendEmailAsync(emailSubject, emailContent, recipient.Email, recipient.Name, fromEmail, fromName);
+                        Logger.LogInfo($"Thank you email sent to: {recipient.Email}");
+                        Console.WriteLine($"✅ Thank you email sent to: {recipient.Email} ({recipient.Name})");
+                        Console.WriteLine($"   Subject: {emailSubject}");
+                        Console.WriteLine($"   From: {fromName} <{fromEmail}>");
+                        
+                        // Note: We don't update the Excel file for thank you emails as they don't affect LastSent status
+                    }
+                }
+
+                Logger.LogInfo("Thank you email processing completed successfully.");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Error processing thank you email for {recipient.Name}: {ex.Message}", ex);
+                Console.WriteLine($"❌ Error sending thank you email to {recipient.Email}: {ex.Message}");
+            }
         }
     }
 }

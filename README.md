@@ -11,7 +11,7 @@ A C# application that processes Excel data to generate personalized PDF document
 - **Excel Integration**: Reads recipient data from Excel files
 - **Markdown Templates**: Uses Markdown templates with YAML metadata for documents and emails
 - **PDF Generation**: Converts Markdown to styled PDF documents
-- **Email Automation**: Sends personalized emails with PDF attachments
+- **Personal Email Automation**: Sends clean, personal emails without custom styling for authentic appearance
 - **Flexible Configuration**: JSON-based configuration system
 - **Logging System**: Comprehensive logging for monitoring and debugging
 ## 📁 Project Structure
@@ -245,14 +245,47 @@ Best regards,
 {{FromName}}
 ```
 
+**Email Styling Philosophy**: DocMailer sends clean, personal emails without custom CSS styling. This ensures emails appear authentic and personal rather than marketing-style messages. The Markdown content is converted to simple HTML without additional formatting, allowing email clients to apply their default styling for a natural reading experience.
+
+### Thank You Template (`Templates/thankyou.md`)
+```markdown
+---
+subject: "Thank you for your response - {{Company}}"
+type: "thankyou_email"
+fromEmail: "your-email@company.com"
+fromName: "Your Name"
+---
+
+Dear {{FirstName}},
+
+Thank you for responding to our Service Agreement proposal for {{Company}}.
+
+Your feedback and confirmation help us move forward efficiently...
+
+Best regards,
+{{FromName}}
+```
+
+**Note**: The thank you template is used by the `send-thankyou` command and only sends to recipients who have responded (Responded = TRUE).
+
 ### Available Placeholders
+
+**Recipient Placeholders:**
 - `{{Name}}` - Full recipient name
 - `{{FirstName}}` - First name (uses FirstName column if provided, otherwise extracts from Name field)
 - `{{Email}}` - Recipient email address
 - `{{Company}}` - Recipient company
 - `{{Position}}` - Recipient position/title
+
+**Sender Placeholders:**
+- `{{FromName}}` - Sender name (from template metadata)
+- `{{FromEmail}}` - Sender email address (from template metadata)
+
+**Date Placeholders:**
 - `{{CurrentDate}}` - Current date (dd/MM/yyyy format)
 - `{{CurrentDateLong}}` - Current date in long format
+
+**Project Placeholders:**
 - `{{ClientID}}` - Client identification number
 - `{{ProjectTitle}}` - Project title
 - `{{StartDate}}` - Project start date
@@ -261,6 +294,8 @@ Best regards,
 - `{{PaymentSchedule}}` - Payment schedule
 - `{{PaymentDueDate}}` - Payment due date
 - `{{ServiceDescription1/2/3}}` - Service descriptions
+
+**Custom Placeholders:**
 - `{{CustomFieldName}}` - Any custom field from Excel
 
 ## 🏃‍♂️ Usage
@@ -275,6 +310,8 @@ Best regards,
 | `send-not-responded` | Send emails only to active recipients who haven't responded | ✅ |
 | `send-test` | Send emails only to test recipients (name/email contains 'test') | ✅ |
 | `send-to <email>` | Send email to a specific recipient by email address | ✅ |
+| `send-thankyou` | Send thank you emails to recipients who have responded | ✅ |
+| `send-thankyou-to <email>` | Send thank you email to a specific recipient who has responded | ✅ |
 | `stats` | Show comprehensive campaign statistics and progress | ❌ |
 | `help` | Show help information | ❌ |
 
@@ -299,6 +336,9 @@ dotnet run send-not-sent --dry-run
 
 # Preview sending to a specific recipient
 dotnet run send-to recipient@example.com --dry-run
+
+# Preview thank you emails to responders
+dotnet run send-thankyou --dry-run
 ```
 
 ### Send to All Recipients
@@ -324,6 +364,27 @@ Sends to active recipients who received emails but haven't responded. Recipients
 dotnet run send-test
 ```
 Sends a test email to the first active recipient for testing purposes. Recipients marked as CANCELED or -1 are excluded.
+
+### Send Thank You Emails
+```bash
+dotnet run send-thankyou
+```
+Sends thank you emails to recipients who have responded (Responded = TRUE/true/1/YES/Y). Uses the `Templates/thankyou.md` template instead of the regular email template. Perfect for sending appreciation emails to subscribers or responders.
+
+### Send Thank You to Specific Recipient
+```bash
+dotnet run send-thankyou-to recipient@example.com
+```
+Sends a thank you email to a specific recipient who has responded. This command:
+- Only works with recipients who have responded (Responded = TRUE/true/1/YES/Y)
+- Uses the `Templates/thankyou.md` template
+- Excludes canceled recipients
+- Provides clear error messages if the recipient hasn't responded or doesn't exist
+
+```bash
+# Preview before sending thank you to specific recipient
+dotnet run send-thankyou-to recipient@example.com --dry-run
+```
 
 ### Send to Specific Recipient
 ```bash
@@ -472,8 +533,13 @@ This will show you:
 
 **Template placeholders not working:**
 - Ensure placeholder names match Excel column headers
-- Check for typos in placeholder syntax
-- Verify YAML metadata format
+- Check for typos in placeholder syntax (e.g., `{{Name}}` not `{{name}}`)
+- Verify YAML metadata format for sender placeholders (`{{FromName}}`, `{{FromEmail}}`)
+- Sender placeholders require corresponding metadata in template:
+  ```yaml
+  fromEmail: "your-email@example.com"
+  fromName: "Your Name"
+  ```
 
 **Markdown formatting not working in PDFs:**
 - The system automatically trims whitespace from all fields

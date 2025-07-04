@@ -23,35 +23,8 @@ namespace DocMailer.Services
 
         public async Task SendEmailAsync(string subject, string markdownContent, string recipientEmail, string recipientName, string fromEmail, string fromName, string? attachmentPath = null)
         {
-            // Convert Markdown to HTML
+            // Convert Markdown to HTML for personal, clean emails without custom styling
             var htmlContent = Markdown.ToHtml(markdownContent, _markdownPipeline);
-            
-            // Add basic inline CSS
-            var styledHtml = $@"
-<html>
-<head>
-    <style>
-        body {{ 
-            font-family: Arial, sans-serif; 
-            line-height: 1.6;
-            color: #333;
-        }}
-        h1, h2, h3 {{ 
-            color: #2c5aa0; 
-        }}
-        .container {{
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-        }}
-    </style>
-</head>
-<body>
-    <div class='container'>
-        {htmlContent}
-    </div>
-</body>
-</html>";
 
             using var client = new SmtpClient(_config.SmtpServer, _config.SmtpPort)
             {
@@ -63,7 +36,7 @@ namespace DocMailer.Services
             {
                 From = new MailAddress(fromEmail, fromName),
                 Subject = subject,
-                Body = styledHtml,
+                Body = htmlContent,
                 IsBodyHtml = true
             };
 

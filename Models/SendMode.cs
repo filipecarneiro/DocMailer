@@ -9,6 +9,7 @@ namespace DocMailer.Models
         NotSent,
         NotResponded,
         Test,
-        Specific
+        Specific,
+        Thankyou
     }
 }
