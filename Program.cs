@@ -167,25 +167,33 @@ namespace DocMailer
                 {
                     Logger.LogInfo($"Processing: {recipient.Name} ({recipient.Email})");
 
-                    // Generate PDF document
-                    var documentContent = _templateService.ProcessDocumentTemplate(documentTemplate, recipient);
+                    string pdfPath = "";
                     
-                    string pdfPath;
-                    if (isDryRun)
+                    // Generate PDF document only for non-thank-you emails
+                    if (mode != SendMode.Thankyou)
                     {
-                        // In dry run mode, don't actually generate the PDF, just show what would be generated
-                        var documentTitle = documentTemplate.Metadata.ContainsKey("title") ? 
-                            documentTemplate.Metadata["title"].ToString() ?? "Document" : "Document";
-                        var safeTitle = documentTitle.Replace(" ", "_");
-                        var safeName = recipient.Name.Replace(" ", "_");
-                        pdfPath = Path.Combine(_config.OutputDirectory, $"{safeTitle}-{safeName}.pdf");
-                        Logger.LogInfo($"[DRY RUN] Would generate PDF: {pdfPath}");
-                        Console.WriteLine($"  📄 Would generate: {Path.GetFileName(pdfPath)}");
+                        var documentContent = _templateService.ProcessDocumentTemplate(documentTemplate, recipient);
+                        
+                        if (isDryRun)
+                        {
+                            // In dry run mode, don't actually generate the PDF, just show what would be generated
+                            var documentTitle = documentTemplate.Metadata.ContainsKey("title") ? 
+                                documentTemplate.Metadata["title"].ToString() ?? "Document" : "Document";
+                            var safeTitle = documentTitle.Replace(" ", "_");
+                            var safeName = recipient.Name.Replace(" ", "_");
+                            pdfPath = Path.Combine(_config.OutputDirectory, $"{safeTitle}-{safeName}.pdf");
+                            Logger.LogInfo($"[DRY RUN] Would generate PDF: {pdfPath}");
+                            Console.WriteLine($"  📄 Would generate: {Path.GetFileName(pdfPath)}");
+                        }
+                        else
+                        {
+                            pdfPath = _pdfGenerator.GeneratePdf(documentContent, _config.OutputDirectory, recipient, documentTemplate);
+                            Logger.LogInfo($"PDF generated: {pdfPath}");
+                        }
                     }
-                    else
+                    else if (isDryRun)
                     {
-                        pdfPath = _pdfGenerator.GeneratePdf(documentContent, _config.OutputDirectory, recipient, documentTemplate);
-                        Logger.LogInfo($"PDF generated: {pdfPath}");
+                        Console.WriteLine($"  📧 Thank you email (no attachment)");
                     }
 
                     // Process email template
@@ -207,10 +215,20 @@ namespace DocMailer
                             Console.WriteLine($"  📧 Would send to: {recipient.Email}");
                             Console.WriteLine($"     Subject: {emailSubject}");
                             Console.WriteLine($"     From: {fromName} <{fromEmail}>");
+                            if (mode == SendMode.Thankyou)
+                            {
+                                Console.WriteLine($"     Attachment: None (thank you email)");
+                            }
+                            else if (!string.IsNullOrEmpty(pdfPath))
+                            {
+                                Console.WriteLine($"     Attachment: {Path.GetFileName(pdfPath)}");
+                            }
                         }
                         else
                         {
-                            await _emailService.SendEmailAsync(emailSubject, emailContent, recipient.Email, recipient.Name, fromEmail, fromName, pdfPath);
+                            // For thank you emails, don't send any attachment
+                            var attachmentPath = mode == SendMode.Thankyou ? null : pdfPath;
+                            await _emailService.SendEmailAsync(emailSubject, emailContent, recipient.Email, recipient.Name, fromEmail, fromName, attachmentPath);
                             Logger.LogInfo($"Email sent to: {recipient.Email}");
                             
                             // Update Excel with success
