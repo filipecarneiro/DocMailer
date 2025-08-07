@@ -24,23 +24,59 @@ namespace DocMailer.Services
             var columnCount = worksheet.Dimension.Columns;
             
             // Find column indices
-            var nameCol = FindColumnIndex(worksheet, "Name") ?? 1;
-            var emailCol = FindColumnIndex(worksheet, "Email") ?? 2;
+            var nameCol = FindColumnIndex(worksheet, "DisplayName") ?? FindColumnIndex(worksheet, "Name");
+            var emailCol = FindColumnIndex(worksheet, "Email") ?? FindColumnIndex(worksheet, "EmailAddress");
             var companyCol = FindColumnIndex(worksheet, "Company");
             var positionCol = FindColumnIndex(worksheet, "Position");
-            var firstNameCol = FindColumnIndex(worksheet, "FirstName");
+            var fullNameCol = FindColumnIndex(worksheet, "FullName");
             var lastSentCol = FindColumnIndex(worksheet, "LastSent");
             var respondedCol = FindColumnIndex(worksheet, "Responded");
             
+            // Log warning if no email column found
+            if (!emailCol.HasValue)
+            {
+                Logger.LogInfo("Warning: No 'Email' or 'EmailAddress' column found in Excel file. All recipients will be skipped.");
+            }
+            
             for (int row = 2; row <= rowCount; row++)
             {
+                // Check if email column exists
+                if (!emailCol.HasValue)
+                {
+                    Logger.LogInfo($"Row {row}: Skipping recipient - no Email or EmailAddress column found in Excel file.");
+                    continue;
+                }
+                
+                var emailText = worksheet.Cells[row, emailCol.Value].Text?.Trim() ?? string.Empty;
+                
+                // Skip recipients without email addresses
+                if (string.IsNullOrEmpty(emailText))
+                {
+                    Logger.LogInfo($"Row {row}: Skipping recipient - no email address provided.");
+                    continue;
+                }
+                
+                var nameText = string.Empty;
+                
+                // Try to get name from Name or DisplayName columns, fallback to email
+                if (nameCol.HasValue)
+                {
+                    nameText = worksheet.Cells[row, nameCol.Value].Text?.Trim() ?? string.Empty;
+                }
+                
+                // If name is empty or no name column found, use email as name
+                if (string.IsNullOrEmpty(nameText))
+                {
+                    nameText = emailText;
+                }
+                
                 var recipient = new Recipient
                 {
-                    Name = worksheet.Cells[row, nameCol].Text?.Trim() ?? string.Empty,
-                    Email = worksheet.Cells[row, emailCol].Text?.Trim() ?? string.Empty,
+                    DisplayName = nameText,
+                    Email = emailText,
                     Company = companyCol.HasValue ? worksheet.Cells[row, companyCol.Value].Text?.Trim() ?? string.Empty : string.Empty,
                     Position = positionCol.HasValue ? worksheet.Cells[row, positionCol.Value].Text?.Trim() ?? string.Empty : string.Empty,
-                    FirstName = firstNameCol.HasValue ? worksheet.Cells[row, firstNameCol.Value].Text?.Trim() ?? string.Empty : string.Empty,
+                    FullName = fullNameCol.HasValue ? worksheet.Cells[row, fullNameCol.Value].Text?.Trim() ?? string.Empty : string.Empty,
                     RowNumber = row
                 };
 
@@ -83,8 +119,13 @@ namespace DocMailer.Services
                     var value = worksheet.Cells[row, col].Text?.Trim();
                     
                     // Skip known standard columns
-                    if (col == nameCol || col == emailCol || col == companyCol || col == positionCol || 
-                        col == firstNameCol || col == lastSentCol || col == respondedCol)
+                    if ((nameCol.HasValue && col == nameCol.Value) || 
+                        (emailCol.HasValue && col == emailCol.Value) || 
+                        (companyCol.HasValue && col == companyCol.Value) || 
+                        (positionCol.HasValue && col == positionCol.Value) || 
+                        (fullNameCol.HasValue && col == fullNameCol.Value) || 
+                        (lastSentCol.HasValue && col == lastSentCol.Value) || 
+                        (respondedCol.HasValue && col == respondedCol.Value))
                         continue;
                     
                     // Add any other column as custom field
@@ -97,7 +138,7 @@ namespace DocMailer.Services
                 // Log custom fields count
                 if (recipient.CustomFields.Count > 0)
                 {
-                    Logger.LogInfo($"Recipient {recipient.Name} has {recipient.CustomFields.Count} custom fields.");
+                    Logger.LogInfo($"Recipient {recipient.DisplayName} has {recipient.CustomFields.Count} custom fields.");
                 }
 
                 recipients.Add(recipient);

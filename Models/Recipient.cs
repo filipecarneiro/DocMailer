@@ -8,7 +8,7 @@ namespace DocMailer.Models
     public class Recipient
     {
         [Required]
-        public string Name { get; set; } = string.Empty;
+        public string DisplayName { get; set; } = string.Empty;
         
         [Required]
         [EmailAddress]
@@ -18,7 +18,7 @@ namespace DocMailer.Models
         
         public string Position { get; set; } = string.Empty;
         
-        public string FirstName { get; set; } = string.Empty;
+        public string FullName { get; set; } = string.Empty;
         
         public DateTime SubscriptionDate { get; set; } = DateTime.Now;
         
@@ -33,9 +33,14 @@ namespace DocMailer.Models
         public int RowNumber { get; set; } // To track Excel row for updates
         
         /// <summary>
-        /// Gets the first name - uses explicit FirstName if available, otherwise extracts from Name field
+        /// Computed first name - uses DisplayName if available, then FullName, then extracts from DisplayName field
         /// </summary>
-        public string GetFirstName() => !string.IsNullOrEmpty(FirstName) ? FirstName.Trim() : Name?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? "";
+        public string FirstName => GetFirstName();
+        
+        /// <summary>
+        /// Gets the first name - uses explicit FullName if available, otherwise extracts from DisplayName field
+        /// </summary>
+        public string GetFirstName() => !string.IsNullOrEmpty(FullName) ? FullName.Trim() : DisplayName?.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim() ?? "";
         
         public Dictionary<string, object> CustomFields { get; set; } = new Dictionary<string, object>();
     }

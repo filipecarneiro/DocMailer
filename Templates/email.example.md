@@ -7,7 +7,7 @@ fromEmail: "your-email@company.com"
 fromName: "Your Name"
 ---
 
-Dear {{FirstName}},
+Dear {{FullName}},
 
 Thank you for choosing our services. I'm pleased to send you the Service Agreement for {{Company}}.
 

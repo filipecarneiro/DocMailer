@@ -165,7 +165,7 @@ namespace DocMailer
             {
                 try
                 {
-                    Logger.LogInfo($"Processing: {recipient.Name} ({recipient.Email})");
+                    Logger.LogInfo($"Processing: {recipient.DisplayName} ({recipient.Email})");
 
                     string pdfPath = "";
                     
@@ -180,7 +180,7 @@ namespace DocMailer
                             var documentTitle = documentTemplate.Metadata.ContainsKey("title") ? 
                                 documentTemplate.Metadata["title"].ToString() ?? "Document" : "Document";
                             var safeTitle = documentTitle.Replace(" ", "_");
-                            var safeName = recipient.Name.Replace(" ", "_");
+                            var safeName = recipient.DisplayName.Replace(" ", "_");
                             pdfPath = Path.Combine(_config.OutputDirectory, $"{safeTitle}-{safeName}.pdf");
                             Logger.LogInfo($"[DRY RUN] Would generate PDF: {pdfPath}");
                             Console.WriteLine($"  📄 Would generate: {Path.GetFileName(pdfPath)}");
@@ -228,7 +228,7 @@ namespace DocMailer
                         {
                             // For thank you emails, don't send any attachment
                             var attachmentPath = mode == SendMode.Thankyou ? null : pdfPath;
-                            await _emailService.SendEmailAsync(emailSubject, emailContent, recipient.Email, recipient.Name, fromEmail, fromName, attachmentPath);
+                            await _emailService.SendEmailAsync(emailSubject, emailContent, recipient.Email, recipient.DisplayName, fromEmail, fromName, attachmentPath);
                             Logger.LogInfo($"Email sent to: {recipient.Email}");
                             
                             // Update Excel with success
@@ -240,7 +240,7 @@ namespace DocMailer
                 }
                 catch (Exception ex)
                 {
-                    Logger.LogError($"Error processing {recipient.Name}: {ex.Message}", ex);
+                    Logger.LogError($"Error processing {recipient.DisplayName}: {ex.Message}", ex);
                     
                     if (!isDryRun)
                     {
@@ -278,7 +278,7 @@ namespace DocMailer
                 SendMode.NotSent => activeRecipients.Where(r => !r.LastSent.HasValue).ToList(),
                 SendMode.NotResponded => activeRecipients.Where(r => r.LastSent.HasValue && (!r.Responded.HasValue || !r.Responded.Value)).ToList(),
                 SendMode.Test => activeRecipients.Where(r => r.Email.Contains("test", StringComparison.OrdinalIgnoreCase) || 
-                                                         r.Name.Contains("test", StringComparison.OrdinalIgnoreCase)).ToList(),
+                                                         r.DisplayName.Contains("test", StringComparison.OrdinalIgnoreCase)).ToList(),
                 SendMode.Thankyou => activeRecipients.Where(r => r.Responded.HasValue && r.Responded.Value).ToList(),
                 SendMode.Specific when !string.IsNullOrEmpty(specificEmail) => activeRecipients.Where(r => 
                     r.Email.Equals(specificEmail, StringComparison.OrdinalIgnoreCase)).ToList(),
@@ -296,17 +296,17 @@ namespace DocMailer
                 // Test email connection (send test email)
                 var testRecipient = new Recipient
                 {
-                    Name = "Test User",
+                    DisplayName = "Test User",
                     Email = _config.Email.Username, // Use the configured email as test recipient
                     Company = "Test Company",
                     Position = "Developer"
                 };
 
-                var testContent = "# Test Email\n\nThis is a test email from DocMailer.\n\n**Name:** {{Name}}\n**Email:** {{Email}}";
+                var testContent = "# Test Email\n\nThis is a test email from DocMailer.\n\n**DisplayName:** {{DisplayName}}\n**Email:** {{Email}}";
                 var testTemplate = new EmailTemplate 
                 { 
                     Content = testContent, 
-                    Subject = "DocMailer Test - {{Name}}",
+                    Subject = "DocMailer Test - {{DisplayName}}",
                     Metadata = new Dictionary<string, object>
                     {
                         { "fromEmail", _config.Email.Username },
@@ -334,7 +334,7 @@ namespace DocMailer
                     }
                     else
                     {
-                        await _emailService.SendEmailAsync(processedSubject, processedContent, testRecipient.Email, testRecipient.Name, 
+                        await _emailService.SendEmailAsync(processedSubject, processedContent, testRecipient.Email, testRecipient.DisplayName, 
                             _config.Email.Username, "DocMailer Test");
                         Logger.LogInfo("Test email sent successfully!");
                     }
@@ -526,8 +526,8 @@ namespace DocMailer
             Console.WriteLine("  dotnet run stats                            # Show campaign statistics");
             Console.WriteLine();
             Console.WriteLine("Excel File Format:");
-            Console.WriteLine("  Required columns: Name, Email");
-            Console.WriteLine("  Optional columns: Company, Position, LastSent, Responded");
+            Console.WriteLine("  Required columns: DisplayName, Email");
+            Console.WriteLine("  Optional columns: Company, Position, FullName, LastSent, Responded");
             Console.WriteLine("  - LastSent: Updated automatically with timestamp or error message");
             Console.WriteLine("  - Responded: Manual update (true/false/CANCELED/-1) to track responses");
             Console.WriteLine("    * TRUE/true/1/YES/Y = Responded");
@@ -593,14 +593,14 @@ namespace DocMailer
                 return;
             }
 
-            Logger.LogInfo($"Found recipient for thank you email: {recipient.Name} ({recipient.Email})");
+            Logger.LogInfo($"Found recipient for thank you email: {recipient.DisplayName} ({recipient.Email})");
 
             // Load thank you email template
             var emailTemplate = _templateService.LoadEmailTemplate(_config.ThankyouTemplatePath);
 
             try
             {
-                Logger.LogInfo($"Processing thank you email for: {recipient.Name} ({recipient.Email})");
+                Logger.LogInfo($"Processing thank you email for: {recipient.DisplayName} ({recipient.Email})");
 
                 // Process email template
                 var emailContent = _templateService.ProcessEmailTemplate(emailTemplate, recipient);
@@ -619,7 +619,7 @@ namespace DocMailer
                         Logger.LogInfo($"[DRY RUN] Subject: {emailSubject}");
                         Logger.LogInfo($"[DRY RUN] From: {fromName} <{fromEmail}>");
                         Console.WriteLine($"🔍 DRY RUN - Would send thank you email:");
-                        Console.WriteLine($"  📧 To: {recipient.Email} ({recipient.Name})");
+                        Console.WriteLine($"  📧 To: {recipient.Email} ({recipient.DisplayName})");
                         Console.WriteLine($"     Subject: {emailSubject}");
                         Console.WriteLine($"     From: {fromName} <{fromEmail}>");
                         Console.WriteLine($"     Template: {Path.GetFileName(_config.ThankyouTemplatePath)}");
@@ -627,9 +627,9 @@ namespace DocMailer
                     }
                     else
                     {
-                        await _emailService.SendEmailAsync(emailSubject, emailContent, recipient.Email, recipient.Name, fromEmail, fromName);
+                        await _emailService.SendEmailAsync(emailSubject, emailContent, recipient.Email, recipient.DisplayName, fromEmail, fromName);
                         Logger.LogInfo($"Thank you email sent to: {recipient.Email}");
-                        Console.WriteLine($"✅ Thank you email sent to: {recipient.Email} ({recipient.Name})");
+                        Console.WriteLine($"✅ Thank you email sent to: {recipient.Email} ({recipient.DisplayName})");
                         Console.WriteLine($"   Subject: {emailSubject}");
                         Console.WriteLine($"   From: {fromName} <{fromEmail}>");
                         
@@ -641,7 +641,7 @@ namespace DocMailer
             }
             catch (Exception ex)
             {
-                Logger.LogError($"Error processing thank you email for {recipient.Name}: {ex.Message}", ex);
+                Logger.LogError($"Error processing thank you email for {recipient.DisplayName}: {ex.Message}", ex);
                 Console.WriteLine($"❌ Error sending thank you email to {recipient.Email}: {ex.Message}");
             }
         }

@@ -158,18 +158,18 @@ For Gmail, use an App Password instead of your regular password:
 
 2. **Edit `recipients.xlsx` with your data** or use the example structure:
 
-| Name | Email | Company | Position | FirstName | ClientID | ProjectTitle | StartDate | Duration | TotalValue |
+| DisplayName | Email | Company | Position | FullName | ClientID | ProjectTitle | StartDate | Duration | TotalValue |
 |------|-------|---------|----------|-----------|----------|--------------|-----------|----------|------------|
 | John Smith | john.smith@acmecorp.com | ACME Corporation | Project Manager | Johnny | CLI001 | Website Development | 2025-07-15 | 3 months | $15,000 |
 | Sarah Johnson | sarah.j@techstartup.io | TechStartup Inc | CEO | | CLI002 | Mobile App Development | 2025-08-01 | 6 months | $45,000 |
 
-**Note:** In the example above, "Johnny" will be used as the first name for John Smith (instead of "John"), while Sarah Johnson will use "Sarah" (extracted from the Name field since FirstName is empty).
+**Note:** In the example above, "Johnny" will be used as the first name for John Smith (instead of "John"), while Sarah Johnson will use "Sarah" (extracted from the DisplayName field since FullName is empty).
 
-**Required columns:** Name, Email  
-**Optional columns:** Company, Position, FirstName, and any custom fields you need
+**Required columns:** DisplayName, Email  
+**Optional columns:** Company, Position, FullName, and any custom fields you need
 
 **Special optional columns:**
-- **FirstName** - If provided, this will be used as the first name instead of extracting from the Name field. Use this for more accurate personalization when the automatic extraction doesn't work well for your naming format.
+- **FullName** - If provided, this will be used as the first name instead of extracting from the DisplayName field. Use this for more accurate personalization when the automatic extraction doesn't work well for your naming format.
 
 **System columns (automatically managed):**
 - **LastSent** - Last email sent timestamp (updated automatically)
@@ -237,7 +237,7 @@ fromEmail: "your-email@company.com"
 fromName: "Your Name"
 ---
 
-Dear {{FirstName}},
+Dear {{FullName}},
 
 Your personalized email content here...
 
@@ -256,7 +256,7 @@ fromEmail: "your-email@company.com"
 fromName: "Your Name"
 ---
 
-Dear {{FirstName}},
+Dear {{FullName}},
 
 Thank you for responding to our Service Agreement proposal for {{Company}}.
 
@@ -271,8 +271,10 @@ Best regards,
 ### Available Placeholders
 
 **Recipient Placeholders:**
-- `{{Name}}` - Full recipient name
-- `{{FirstName}}` - First name (uses FirstName column if provided, otherwise extracts from Name field)
+- `{{DisplayName}}` - Full recipient display name
+- `{{Name}}` - Full recipient display name (backward compatibility)
+- `{{FirstName}}` - First name (computed from FullName if provided, otherwise extracted from DisplayName field)
+- `{{FullName}}` - First name (uses FullName column if provided, otherwise extracts from DisplayName field)
 - `{{Email}}` - Recipient email address
 - `{{Company}}` - Recipient company
 - `{{Position}}` - Recipient position/title

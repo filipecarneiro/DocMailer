@@ -14,7 +14,7 @@ styleSheet: "Templates/document.css"
 **Agreement Date:** {{CurrentDate}}
 
 **Client Information:**
-- **Name:** {{Name}}
+- **Name:** {{DisplayName}}
 - **Company:** {{Company}}
 - **Position:** {{Position}}
 - **Email:** {{Email}}
@@ -56,7 +56,7 @@ By signing below, both parties agree to the terms and conditions outlined in thi
 
 **Client Signature:**
 
-<div class="signature-line">{{Name}} - {{Position}}, {{Company}}</div>
+<div class="signature-line">{{DisplayName}} - {{Position}}, {{Company}}</div>
 
 **Date:** _______________
 

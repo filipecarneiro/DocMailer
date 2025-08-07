@@ -56,7 +56,7 @@ namespace DocMailer.Services
             var documentTitle = template.Metadata.ContainsKey("title") ? 
                 template.Metadata["title"].ToString() ?? "Document" : "Document";
             var safeTitle = SanitizeFileName(documentTitle).Replace(" ", "_");
-            var safeName = SanitizeFileName(recipient.Name).Replace(" ", "_");
+            var safeName = SanitizeFileName(recipient.DisplayName).Replace(" ", "_");
             var fileName = $"{safeTitle}-{safeName}.pdf";
             var fullPath = Path.Combine(outputPath, fileName);
 
