@@ -21,3 +21,5 @@ Data/~$*.xlsx
 CreateExampleExcel.cs
 
 .fake
+Templates/edital.pdf
+Templates/procuracao.md
